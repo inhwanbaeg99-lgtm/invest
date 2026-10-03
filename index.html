@@ -976,7 +976,7 @@
         b.classList.toggle('active', isActive);
         if (isActive) activeBtn = b;
       });
-      if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+      if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
       window.scrollTo({ top: 0 });
     }
     applyViewVisibility();
