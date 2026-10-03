@@ -167,11 +167,6 @@
     justify-content: center;
     cursor: pointer;
   }
-  .search-icon-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #04201d;
-  }
   .mode-tabs {
     display: flex;
     gap: 6px;
@@ -202,24 +197,95 @@
     border-color: var(--accent);
     color: #04201d;
   }
-  .search-input-inline {
+  .search-page {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--bg);
+    display: none;
+    justify-content: center;
+    padding: max(20px, env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
+  }
+  .search-page.open {
+    display: flex;
+  }
+  .search-page-inner {
     width: 100%;
-    height: 36px;
-    padding: 0 14px;
+    max-width: 720px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .search-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 auto;
+  }
+  .search-page-header .title {
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .search-input-row {
+    position: relative;
+    margin-top: 28px;
+    flex: 0 0 auto;
+  }
+  .search-input-row svg.search-input-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-sub);
+    pointer-events: none;
+  }
+  .search-page-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 44px 0 44px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--panel);
     color: var(--ink);
     font-family: inherit;
     font-size: 16px;
     box-sizing: border-box;
   }
-  .search-input-inline::placeholder {
+  .search-page-input::placeholder {
     color: var(--ink-sub);
   }
-  .search-input-inline:focus {
+  .search-page-input:focus {
     outline: none;
     border-color: var(--accent);
+  }
+  .search-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: var(--line);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .search-clear-btn[hidden] {
+    display: none;
+  }
+  .search-page-list {
+    margin-top: 20px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .empty.search-empty {
+    padding-top: 22vh;
   }
   .row.search-row-item {
     grid-template-columns: 1fr auto auto;
@@ -459,7 +525,6 @@
         <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
         <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
       </div>
-      <input type="text" class="search-input-inline" id="searchInput" placeholder="종목명 또는 티커 (SOXL, 엔비디아, 삼성전자...)" hidden />
     </div>
     <div class="list" id="list">
       <div class="empty">불러오는 중...</div>
@@ -503,6 +568,36 @@
     </div>
   </div>
 
+  <div class="search-page" id="searchPage">
+    <div class="search-page-inner">
+      <div class="search-page-header">
+        <div class="title">Tickr</div>
+        <button type="button" class="chart-close" id="searchPageClose" aria-label="닫기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="search-input-row">
+        <svg class="search-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" class="search-page-input" id="searchInput" placeholder="종목명 또는 티커 (SOXL, 엔비디아, 삼성전자...)" />
+        <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="지우기" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="search-page-list" id="searchPageList">
+        <div class="empty search-empty">검색어를 입력하세요</div>
+      </div>
+    </div>
+  </div>
+
   <div class="bottom-nav-bar">
     <div class="nav-highlight" id="navHighlight"></div>
     <button type="button" class="nav-btn active" id="navAllBtn" aria-label="전체시세">
@@ -533,8 +628,12 @@
   const listEl = document.getElementById('list');
   const updatedAtEl = document.getElementById('updatedAt');
   const modeTabsEl = document.getElementById('modeTabs');
-  const searchInputEl = document.getElementById('searchInput');
   const searchIconBtn = document.getElementById('searchIconBtn');
+  const searchPageEl = document.getElementById('searchPage');
+  const searchPageClose = document.getElementById('searchPageClose');
+  const searchInputEl = document.getElementById('searchInput');
+  const searchClearBtn = document.getElementById('searchClearBtn');
+  const searchPageListEl = document.getElementById('searchPageList');
   const currencyToggleEl = document.getElementById('currencyToggle');
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
@@ -726,8 +825,9 @@
 
   function performGlobalSearch(query) {
     const q = query.trim().toLowerCase();
+    searchClearBtn.hidden = !query;
     if (!q) {
-      listEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
+      searchPageListEl.innerHTML = '<div class="empty search-empty">검색어를 입력하세요</div>';
       return;
     }
     const savedMode = mode;
@@ -742,7 +842,7 @@
     });
     mode = savedMode;
     matches.sort((a, b) => Number(b.t.quoteVolume) - Number(a.t.quoteVolume));
-    listEl.innerHTML = matches.length
+    searchPageListEl.innerHTML = matches.length
       ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
       : '<div class="empty">검색 결과가 없습니다</div>';
   }
@@ -793,21 +893,17 @@
 
   function openSearch() {
     searchOpen = true;
-    searchIconBtn.classList.add('active');
-    modeTabsEl.style.display = 'none';
-    searchInputEl.hidden = false;
+    searchPageEl.classList.add('open');
     searchInputEl.value = '';
+    searchClearBtn.hidden = true;
+    searchPageListEl.innerHTML = '<div class="empty search-empty">검색어를 입력하세요</div>';
     searchInputEl.focus();
-    listEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
   }
 
   function closeSearch() {
     if (!searchOpen) return;
     searchOpen = false;
-    searchIconBtn.classList.remove('active');
-    modeTabsEl.style.display = '';
-    searchInputEl.hidden = true;
-    renderCurrent();
+    searchPageEl.classList.remove('open');
   }
 
   function applyViewVisibility() {
@@ -858,10 +954,16 @@
   searchInputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSearch();
   });
+  searchClearBtn.addEventListener('click', () => {
+    searchInputEl.value = '';
+    searchInputEl.focus();
+    performGlobalSearch('');
+  });
 
-  searchIconBtn.addEventListener('click', () => {
-    if (searchOpen) closeSearch();
-    else openSearch();
+  searchIconBtn.addEventListener('click', openSearch);
+  searchPageClose.addEventListener('click', closeSearch);
+  searchPageEl.addEventListener('click', (e) => {
+    if (e.target === searchPageEl) closeSearch();
   });
 
   currencyToggleEl.addEventListener('click', (e) => {
@@ -1082,6 +1184,10 @@
   }
 
   listEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.row');
+    if (row) openChart(row.dataset.symbol, row.dataset.cat);
+  });
+  searchPageListEl.addEventListener('click', (e) => {
     const row = e.target.closest('.row');
     if (row) openChart(row.dataset.symbol, row.dataset.cat);
   });
