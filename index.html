@@ -1393,20 +1393,16 @@
       </div>
     `;
 
-    const FNG_LABELS_KR = {
-      'Extreme Fear': '극단적 공포',
-      Fear: '공포',
-      Neutral: '중립',
-      Greed: '탐욕',
-      'Extreme Greed': '극단적 탐욕',
-    };
-    const fngCls = cryptoFearGreed
-      ? cryptoFearGreed.label.includes('Fear')
-        ? 'down'
-        : cryptoFearGreed.label.includes('Greed')
-          ? 'up'
-          : ''
-      : '';
+    function fngCardHtml(label, fng) {
+      const cls = fng ? (fng.label.includes('fear') ? 'down' : fng.label.includes('greed') ? 'up' : '') : '';
+      return `
+        <div class="indicator-card">
+          <div class="indicator-label">${label}</div>
+          <div class="indicator-value">${fng ? fng.value : '-'}</div>
+          ${fng ? `<div class="indicator-change ${cls}">${FNG_LABELS_KR[fng.label] || fng.label}</div>` : ''}
+        </div>
+      `;
+    }
 
     const fearGreedHtml = `
       <div>
@@ -1414,15 +1410,8 @@
           <div class="home-section-title">공포·탐욕 지수</div>
         </div>
         <div class="indicators-grid">
-          <div class="indicator-card">
-            <div class="indicator-label">주식</div>
-            <div class="indicator-value">준비 중</div>
-          </div>
-          <div class="indicator-card">
-            <div class="indicator-label">코인</div>
-            <div class="indicator-value">${cryptoFearGreed ? cryptoFearGreed.value : '-'}</div>
-            ${cryptoFearGreed ? `<div class="indicator-change ${fngCls}">${FNG_LABELS_KR[cryptoFearGreed.label] || cryptoFearGreed.label}</div>` : ''}
-          </div>
+          ${fngCardHtml('주식', stockFearGreed)}
+          ${fngCardHtml('코인', cryptoFearGreed)}
         </div>
       </div>
     `;
@@ -1549,13 +1538,34 @@
   }
 
   let cryptoFearGreed = null;
+  let stockFearGreed = null;
+  const FNG_LABELS_KR = {
+    'extreme fear': '극단적 공포',
+    fear: '공포',
+    neutral: '중립',
+    greed: '탐욕',
+    'extreme greed': '극단적 탐욕',
+  };
 
   async function loadFearGreed() {
     try {
       const data = await fetchJson('https://api.alternative.me/fng/?limit=1');
       const entry = data && data.data && data.data[0];
       if (entry) {
-        cryptoFearGreed = { value: Number(entry.value), label: entry.value_classification };
+        cryptoFearGreed = { value: Number(entry.value), label: entry.value_classification.toLowerCase() };
+        if (view === 'home') renderHome();
+      }
+    } catch (e) {
+      // keep previous value on failure
+    }
+  }
+
+  async function loadStockFearGreed() {
+    try {
+      const data = await fetchJson('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
+      const entry = data && data.fear_and_greed;
+      if (entry && entry.score != null) {
+        stockFearGreed = { value: Math.round(entry.score), label: (entry.rating || '').toLowerCase() };
         if (view === 'home') renderHome();
       }
     } catch (e) {
@@ -1707,6 +1717,8 @@
   setInterval(loadFxRate, FX_REFRESH_MS);
   loadFearGreed();
   setInterval(loadFearGreed, FX_REFRESH_MS);
+  loadStockFearGreed();
+  setInterval(loadStockFearGreed, FX_REFRESH_MS);
   loadMeta().then(refreshAll);
   setInterval(refreshAll, REFRESH_MS);
 
