@@ -27,17 +27,7 @@
   .wrap {
     max-width: 720px;
     margin: 0 auto;
-    padding: 52px 16px 60px;
-  }
-  .brand {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 50;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    color: var(--accent);
+    padding: 28px 16px 60px;
   }
   .header {
     display: flex;
@@ -310,11 +300,9 @@
 </head>
 <body>
 
-  <div class="brand">Tickr</div>
-
   <div class="wrap">
     <div class="header">
-      <div class="title" id="modeTitle">가상화폐</div>
+      <div class="title" id="modeTitle">Tickr</div>
       <div class="header-right">
         <div class="currency-toggle" id="currencyToggle">
           <button type="button" class="currency-btn active" data-currency="USD">$</button>
@@ -369,7 +357,6 @@
   const updatedAtEl = document.getElementById('updatedAt');
   const footerNoteEl = document.getElementById('footerNote');
   const modeTabsEl = document.getElementById('modeTabs');
-  const modeTitleEl = document.getElementById('modeTitle');
   const searchInputEl = document.getElementById('searchInput');
   const currencyToggleEl = document.getElementById('currencyToggle');
 
@@ -379,14 +366,6 @@
     'XAU', 'CL', 'XAG', 'BZ', 'QQQ', 'EWY', 'SPY', 'NATGAS', 'COPPER',
     'XPD', 'SMH', 'IWM', 'EWZ', 'EWJ', 'GDX', 'EWT', 'XLE', 'XBI',
   ]);
-
-  const MODES = {
-    domestic: { label: '국내주식' },
-    us: { label: '미국주식' },
-    leverage: { label: '레버리지' },
-    crypto: { label: '가상화폐' },
-    index: { label: '지수·원자재' },
-  };
 
   const KR_NAMES = {
     domestic: {
@@ -600,7 +579,6 @@
     modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
       b.classList.toggle('active', b.dataset.mode === mode);
     });
-    modeTitleEl.textContent = MODES[mode].label;
     footerNoteEl.textContent = FOOTER_NOTES[mode];
     renderCurrent();
   }
