@@ -227,7 +227,7 @@
     background: var(--bg);
     display: none;
     justify-content: center;
-    padding: max(20px, env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
+    padding: calc(28px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
   }
   .search-page.open {
     display: flex;
@@ -242,17 +242,15 @@
   }
   .search-page-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
     flex: 0 0 auto;
-  }
-  .search-page-header .title {
-    font-size: 24px;
-    font-weight: 800;
   }
   .search-input-row {
     position: relative;
-    margin-top: 28px;
+    margin-top: 14px;
     flex: 0 0 auto;
   }
   .search-input-row svg.search-input-icon {
@@ -306,9 +304,6 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-  }
-  .empty.search-empty {
-    padding-top: 22vh;
   }
   .row.search-row-item {
     grid-template-columns: 1fr auto auto;
@@ -389,7 +384,7 @@
     background: var(--bg);
     display: none;
     justify-content: center;
-    padding: max(20px, env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
+    padding: calc(28px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
   }
   .chart-overlay.open {
     display: flex;
@@ -633,7 +628,7 @@
           <circle cx="11" cy="11" r="7" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <input type="text" class="search-page-input" id="searchInput" placeholder="종목명 또는 티커 (SOXL, 엔비디아, 삼성전자...)" />
+        <input type="text" class="search-page-input" id="searchInput" placeholder="검색어를 입력하세요" />
         <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="지우기" hidden>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -641,9 +636,7 @@
           </svg>
         </button>
       </div>
-      <div class="search-page-list" id="searchPageList">
-        <div class="empty search-empty">검색어를 입력하세요</div>
-      </div>
+      <div class="search-page-list" id="searchPageList"></div>
     </div>
   </div>
 
@@ -878,7 +871,7 @@
     const q = query.trim().toLowerCase();
     searchClearBtn.hidden = !query;
     if (!q) {
-      searchPageListEl.innerHTML = '<div class="empty search-empty">검색어를 입력하세요</div>';
+      searchPageListEl.innerHTML = '';
       return;
     }
     const savedMode = mode;
@@ -947,7 +940,7 @@
     searchPageEl.classList.add('open');
     searchInputEl.value = '';
     searchClearBtn.hidden = true;
-    searchPageListEl.innerHTML = '<div class="empty search-empty">검색어를 입력하세요</div>';
+    searchPageListEl.innerHTML = '';
     searchInputEl.focus();
   }
 
@@ -1257,7 +1250,9 @@
   });
   searchPageListEl.addEventListener('click', (e) => {
     const row = e.target.closest('.row');
-    if (row) openChart(row.dataset.symbol, row.dataset.cat);
+    if (!row) return;
+    closeSearch();
+    openChart(row.dataset.symbol, row.dataset.cat);
   });
   chartClose.addEventListener('click', closeChart);
   chartOverlay.addEventListener('click', (e) => {
