@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <link rel="preconnect" href="https://fapi.binance.com" crossorigin />
 <link rel="dns-prefetch" href="https://fapi.binance.com" />
 <link rel="manifest" href="manifest.json" />
@@ -32,6 +32,8 @@
     color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
   .wrap {
     max-width: 720px;
@@ -49,7 +51,7 @@
   .bottom-nav-bar {
     position: fixed;
     left: 50%;
-    bottom: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     z-index: 60;
     display: flex;
@@ -153,8 +155,8 @@
     color: #04201d;
   }
   .search-icon-btn {
-    width: 33px;
-    height: 27px;
+    width: 42px;
+    height: 32px;
     flex: 0 0 auto;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -164,9 +166,6 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-  }
-  .search-wrap {
-    margin-bottom: 12px;
   }
   .mode-tabs {
     display: flex;
@@ -189,29 +188,70 @@
     cursor: pointer;
     white-space: nowrap;
   }
+  @media (min-width: 768px) {
+    .mode-tab {
+      font-size: 12.5px;
+    }
+  }
   .mode-tab.active {
     background: var(--accent);
     border-color: var(--accent);
     color: #04201d;
   }
-  .search-input {
+  .search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+    padding: max(20px, env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+  }
+  .search-overlay.open {
+    display: flex;
+  }
+  .search-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex: 0 0 auto;
+  }
+  .search-modal-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .search-modal-input {
     width: 100%;
-    height: 40px;
-    padding: 0 14px;
+    height: 48px;
+    padding: 0 16px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--panel);
     color: var(--ink);
     font-family: inherit;
     font-size: 16px;
     box-sizing: border-box;
+    margin-bottom: 16px;
+    flex: 0 0 auto;
   }
-  .search-input::placeholder {
+  .search-modal-input::placeholder {
     color: var(--ink-sub);
   }
-  .search-input:focus {
+  .search-modal-input:focus {
     outline: none;
     border-color: var(--accent);
+  }
+  .search-results {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .row.search-row-item {
+    grid-template-columns: 1fr auto auto;
   }
   .list {
     background: var(--panel);
@@ -398,14 +438,11 @@
           </div>
         </div>
         <button type="button" class="search-icon-btn" id="searchIconBtn" aria-label="검색">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </button>
-      </div>
-      <div class="search-wrap" id="searchWrap" hidden>
-        <input type="text" class="search-input" id="searchInput" placeholder="종목 검색 (티커 또는 한글 이름)" />
       </div>
       <div class="mode-tabs" id="modeTabs">
         <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
@@ -419,6 +456,17 @@
       <div class="empty">불러오는 중...</div>
     </div>
     <div class="footer-note" id="updatedAt">불러오는 중...</div>
+  </div>
+
+  <div class="search-overlay" id="searchOverlay">
+    <div class="search-modal-header">
+      <div class="search-modal-title">종목 검색</div>
+      <button type="button" class="chart-close" id="searchClose" aria-label="닫기">✕</button>
+    </div>
+    <input type="text" class="search-modal-input" id="searchInput" placeholder="종목명 또는 티커 (SOXL, 엔비디아, 삼성전자...)" />
+    <div class="search-results" id="searchResults">
+      <div class="empty">검색어를 입력하세요</div>
+    </div>
   </div>
 
   <div class="chart-overlay" id="chartOverlay">
@@ -474,8 +522,10 @@
   const updatedAtEl = document.getElementById('updatedAt');
   const modeTabsEl = document.getElementById('modeTabs');
   const searchInputEl = document.getElementById('searchInput');
-  const searchWrapEl = document.getElementById('searchWrap');
   const searchIconBtn = document.getElementById('searchIconBtn');
+  const searchOverlayEl = document.getElementById('searchOverlay');
+  const searchCloseBtn = document.getElementById('searchClose');
+  const searchResultsEl = document.getElementById('searchResults');
   const currencyToggleEl = document.getElementById('currencyToggle');
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
@@ -493,6 +543,10 @@
     'XAU', 'CL', 'XAG', 'BZ', 'QQQ', 'EWY', 'SPY', 'NATGAS', 'COPPER',
     'XPD', 'SMH', 'IWM', 'EWZ', 'EWJ', 'GDX', 'EWT', 'XLE', 'XBI',
   ]);
+  const ALL_CATEGORIES = ['domestic', 'us', 'leverage', 'crypto', 'index'];
+  const CATEGORY_LABELS = {
+    domestic: '국내주식', us: '미국주식', leverage: '레버리지', crypto: '가상화폐', index: '지수·원자재',
+  };
 
   const KR_NAMES = {
     domestic: {
@@ -557,7 +611,6 @@
   let krwRate = null;
   let fullTickers = [];
   let rawTickers = [];
-  let searchQuery = '';
   let symbolMeta = {};
 
   function formatPrice(p) {
@@ -607,16 +660,6 @@
     }
   }
 
-  function applySearch(tickers) {
-    if (!searchQuery) return tickers;
-    const q = searchQuery.toLowerCase();
-    return tickers.filter((t) => {
-      const name = displayName(t.symbol).toLowerCase();
-      const kr = (krName(displayName(t.symbol)) || '').toLowerCase();
-      return name.includes(q) || kr.includes(q);
-    });
-  }
-
   function renderRows(tickers) {
     return tickers
       .map((t, i) => {
@@ -642,7 +685,7 @@
 
   function render(tickers) {
     if (!tickers.length) {
-      listEl.innerHTML = `<div class="empty">${searchQuery ? '검색 결과가 없습니다' : '불러오는 중...'}</div>`;
+      listEl.innerHTML = '<div class="empty">불러오는 중...</div>';
       return;
     }
     listEl.innerHTML = renderRows(tickers);
@@ -656,7 +699,51 @@
     const filtered = fullTickers.filter(categoryFilter);
     filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
     rawTickers = mode === 'us' || mode === 'crypto' ? filtered.slice(0, TOP_N) : filtered;
-    render(applySearch(rawTickers));
+    render(rawTickers);
+  }
+
+  function renderSearchRow(t, cat) {
+    const savedMode = mode;
+    mode = cat;
+    const changeNum = Number(t.priceChangePercent);
+    const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
+    const sign = changeNum > 0 ? '+' : '';
+    const name = displayName(t.symbol);
+    const kr = krName(name);
+    mode = savedMode;
+    return `
+      <div class="row search-row-item" data-symbol="${t.symbol}">
+        <div class="coin">
+          <div class="coin-symbol">${name}</div>
+          <div class="coin-vol">${CATEGORY_LABELS[cat]}${kr ? ' · ' + kr : ''} · 거래대금 ${formatVolume(t.quoteVolume)}</div>
+        </div>
+        <div class="price">${formatPrice(t.lastPrice)}</div>
+        <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
+      </div>
+    `;
+  }
+
+  function performGlobalSearch(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      searchResultsEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
+      return;
+    }
+    const savedMode = mode;
+    const matches = [];
+    ALL_CATEGORIES.forEach((cat) => {
+      mode = cat;
+      fullTickers.filter(categoryFilter).forEach((t) => {
+        const name = displayName(t.symbol).toLowerCase();
+        const kr = (krName(displayName(t.symbol)) || '').toLowerCase();
+        if (name.includes(q) || kr.includes(q)) matches.push({ t, cat });
+      });
+    });
+    mode = savedMode;
+    matches.sort((a, b) => Number(b.t.quoteVolume) - Number(a.t.quoteVolume));
+    searchResultsEl.innerHTML = matches.length
+      ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
+      : '<div class="empty">검색 결과가 없습니다</div>';
   }
 
   async function fetchJson(url) {
@@ -701,8 +788,15 @@
     updatedAtEl.textContent = `${hh}:${mm}:${ss} 기준`;
   }
 
+  function openSearch() {
+    searchOverlayEl.classList.add('open');
+    searchInputEl.value = '';
+    searchResultsEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
+    searchInputEl.focus();
+  }
+
   function closeSearch() {
-    searchWrapEl.hidden = true;
+    searchOverlayEl.classList.remove('open');
   }
 
   function applyViewVisibility() {
@@ -721,6 +815,7 @@
       modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
         b.classList.toggle('active', b.dataset.mode === mode);
       });
+      window.scrollTo({ top: 0 });
     }
     applyViewVisibility();
     renderCurrent();
@@ -747,13 +842,19 @@
   navAllBtn.addEventListener('click', () => setView('all'));
 
   searchInputEl.addEventListener('input', () => {
-    searchQuery = searchInputEl.value.trim();
-    renderCurrent();
+    performGlobalSearch(searchInputEl.value);
   });
 
-  searchIconBtn.addEventListener('click', () => {
-    searchWrapEl.hidden = !searchWrapEl.hidden;
-    if (!searchWrapEl.hidden) searchInputEl.focus();
+  searchIconBtn.addEventListener('click', openSearch);
+  searchCloseBtn.addEventListener('click', closeSearch);
+  searchOverlayEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSearch();
+  });
+  searchResultsEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.row');
+    if (!row) return;
+    closeSearch();
+    openChart(row.dataset.symbol);
   });
 
   currencyToggleEl.addEventListener('click', (e) => {
@@ -902,8 +1003,21 @@
   });
 
   if ('serviceWorker' in navigator) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js').then((reg) => {
+        reg.update().catch(() => {});
+      }).catch(() => {});
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.getRegistration().then((reg) => reg && reg.update().catch(() => {}));
+      }
     });
   }
 </script>
