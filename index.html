@@ -27,7 +27,50 @@
   .wrap {
     max-width: 720px;
     margin: 0 auto;
-    padding: 28px 16px 60px;
+    padding: 28px 16px 110px;
+  }
+  .group-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 14px 16px 8px;
+  }
+  .bottom-nav-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  }
+  .nav-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-sub);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .nav-btn.active {
+    background: var(--accent);
+    color: #04201d;
+  }
+  .nav-btn.nav-btn-disabled {
+    opacity: 0.3;
+    cursor: default;
   }
   .header {
     display: flex;
@@ -347,6 +390,28 @@
     </div>
   </div>
 
+  <div class="bottom-nav-bar">
+    <button type="button" class="nav-btn" id="navAllBtn" aria-label="전체시세">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+      </svg>
+    </button>
+    <button type="button" class="nav-btn active" id="navHomeBtn" aria-label="홈">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 11l9-8 9 8" />
+        <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+      </svg>
+    </button>
+    <button type="button" class="nav-btn nav-btn-disabled" id="navMyBtn" aria-label="준비 중">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      </svg>
+    </button>
+  </div>
+
 <script>
   const FAPI = 'https://fapi.binance.com/fapi/v1';
   const TOP_N = 20;
@@ -359,6 +424,8 @@
   const modeTabsEl = document.getElementById('modeTabs');
   const searchInputEl = document.getElementById('searchInput');
   const currencyToggleEl = document.getElementById('currencyToggle');
+  const navAllBtn = document.getElementById('navAllBtn');
+  const navHomeBtn = document.getElementById('navHomeBtn');
 
   // 레버리지/인버스 ETF와 지수 추종 ETF는 바이낸스 선물 API에서 EQUITY로 묶여 있어서 직접 분리
   const LEVERAGE_TICKERS = new Set(['SOXL', 'SOXS', 'TQQQ', 'SQQQ', 'KORU', 'RAM', 'RAMZ', 'UVXY']);
@@ -424,7 +491,12 @@
     },
   };
 
+  const CATEGORY_LABELS = {
+    domestic: '국내주식', us: '미국주식', leverage: '레버리지', crypto: '가상화폐', index: '지수·원자재',
+  };
+
   let mode = 'domestic';
+  let view = 'home';
   let currency = 'KRW';
   let krwRate = null;
   let fullTickers = [];
@@ -489,12 +561,8 @@
     });
   }
 
-  function render(tickers) {
-    if (!tickers.length) {
-      listEl.innerHTML = `<div class="empty">${searchQuery ? '검색 결과가 없습니다' : '불러오는 중...'}</div>`;
-      return;
-    }
-    listEl.innerHTML = tickers
+  function renderRows(tickers) {
+    return tickers
       .map((t, i) => {
         const changeNum = Number(t.priceChangePercent);
         const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
@@ -516,7 +584,39 @@
       .join('');
   }
 
+  function render(tickers) {
+    if (!tickers.length) {
+      listEl.innerHTML = `<div class="empty">${searchQuery ? '검색 결과가 없습니다' : '불러오는 중...'}</div>`;
+      return;
+    }
+    listEl.innerHTML = renderRows(tickers);
+  }
+
+  function renderAllView() {
+    const categories = ['domestic', 'us', 'leverage', 'crypto', 'index'];
+    const savedMode = mode;
+    let html = '';
+    let any = false;
+    categories.forEach((cat) => {
+      mode = cat;
+      let filtered = fullTickers.filter(categoryFilter);
+      filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
+      filtered = applySearch(filtered).slice(0, 5);
+      if (!filtered.length) return;
+      any = true;
+      html += `<div class="group-label">${CATEGORY_LABELS[cat]}</div>` + renderRows(filtered);
+    });
+    mode = savedMode;
+    listEl.innerHTML = any
+      ? html
+      : `<div class="empty">${searchQuery ? '검색 결과가 없습니다' : '불러오는 중...'}</div>`;
+  }
+
   function renderCurrent() {
+    if (view === 'all') {
+      renderAllView();
+      return;
+    }
     const filtered = fullTickers.filter(categoryFilter);
     filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
     rawTickers = mode === 'us' || mode === 'crypto' ? filtered.slice(0, TOP_N) : filtered;
@@ -572,14 +672,30 @@
     crypto: '바이낸스 선물(USDT 무기한 계약) 공개 API 기준 · 5초마다 갱신',
     index: '지수 ETF·원자재·금 토큰 기준 · 5초마다 갱신',
   };
+  const ALL_VIEW_FOOTER_NOTE = '카테고리별 거래대금 상위 5개씩 모아보기 · 5초마다 갱신';
 
   function setMode(next) {
-    if (mode === next) return;
-    mode = next;
-    modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
-      b.classList.toggle('active', b.dataset.mode === mode);
-    });
+    view = 'home';
+    navHomeBtn.classList.add('active');
+    navAllBtn.classList.remove('active');
+    modeTabsEl.style.display = '';
+    if (mode !== next) {
+      mode = next;
+      modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.mode === mode);
+      });
+    }
     footerNoteEl.textContent = FOOTER_NOTES[mode];
+    renderCurrent();
+  }
+
+  function setView(next) {
+    if (view === next) return;
+    view = next;
+    navHomeBtn.classList.toggle('active', view === 'home');
+    navAllBtn.classList.toggle('active', view === 'all');
+    modeTabsEl.style.display = view === 'all' ? 'none' : '';
+    footerNoteEl.textContent = view === 'all' ? ALL_VIEW_FOOTER_NOTE : FOOTER_NOTES[mode];
     renderCurrent();
   }
 
@@ -587,6 +703,9 @@
     const btn = e.target.closest('.mode-tab');
     if (btn) setMode(btn.dataset.mode);
   });
+
+  navHomeBtn.addEventListener('click', () => setView('home'));
+  navAllBtn.addEventListener('click', () => setView('all'));
 
   searchInputEl.addEventListener('input', () => {
     searchQuery = searchInputEl.value.trim();
