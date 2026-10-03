@@ -402,6 +402,313 @@
     text-align: center;
   }
 
+  /* ---------- Home ---------- */
+  .list.home-view {
+    background: none;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .home-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .portfolio-label {
+    font-size: 12.5px;
+    color: var(--ink-sub);
+    margin-bottom: 8px;
+  }
+  .portfolio-total {
+    font-size: 28px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .portfolio-pnl {
+    margin-top: 4px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink-sub);
+  }
+  .portfolio-pnl.up { color: var(--up); }
+  .portfolio-pnl.down { color: var(--down); }
+  .portfolio-empty-note {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--ink-sub);
+  }
+  .add-holding-link {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .home-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .home-section-title {
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .home-edit-link {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-sub);
+    cursor: pointer;
+  }
+  .watchlist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .watchlist-item {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    cursor: pointer;
+  }
+  .watchlist-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .watchlist-symbol {
+    min-width: 0;
+  }
+  .watchlist-symbol-name {
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .watchlist-symbol-kr {
+    font-size: 11px;
+    color: var(--ink-sub);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .watchlist-remove-btn {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 999px;
+    background: var(--down);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .watchlist-sparkline {
+    width: 100%;
+    height: 40px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .watchlist-price {
+    font-size: 15px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .watchlist-change {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .watchlist-change.up { color: var(--up); }
+  .watchlist-change.down { color: var(--down); }
+  .watchlist-qty {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--ink-sub);
+  }
+  .indicators-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .indicator-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .indicator-label {
+    font-size: 12px;
+    color: var(--ink-sub);
+    margin-bottom: 6px;
+  }
+  .indicator-value {
+    font-size: 17px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .indicator-change {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .indicator-change.up { color: var(--up); }
+  .indicator-change.down { color: var(--down); }
+
+  /* ---------- Add holding overlay ---------- */
+  .add-holding-page {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: var(--bg);
+    display: none;
+    justify-content: center;
+    padding: calc(18px + env(safe-area-inset-top)) 0 calc(20px + var(--safe-bottom));
+  }
+  .add-holding-page.open {
+    display: flex;
+  }
+  .add-holding-inner {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .add-holding-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex: 0 0 auto;
+  }
+  .add-holding-title {
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .add-holding-search-row {
+    position: relative;
+    flex: 0 0 auto;
+  }
+  .add-holding-search-row svg {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-sub);
+    pointer-events: none;
+  }
+  .add-holding-search-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px 0 44px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+  .add-holding-search-input::placeholder {
+    color: var(--ink-sub);
+  }
+  .add-holding-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .add-holding-results {
+    margin-top: 16px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .add-holding-form {
+    margin-top: 16px;
+    flex: 0 0 auto;
+  }
+  .add-holding-selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+  .add-holding-selected-name {
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .add-holding-selected-kr {
+    font-size: 12px;
+    color: var(--ink-sub);
+  }
+  .add-holding-change-btn {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .add-holding-field {
+    margin-bottom: 14px;
+  }
+  .add-holding-field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--ink-sub);
+    margin-bottom: 6px;
+  }
+  .add-holding-field input {
+    width: 100%;
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
+  }
+  .add-holding-field input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .add-holding-submit {
+    width: 100%;
+    height: 50px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #04201d;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .add-holding-submit:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
   .chart-overlay {
     position: fixed;
     inset: 0;
@@ -664,6 +971,46 @@
     </div>
   </div>
 
+  <div class="add-holding-page" id="addHoldingPage">
+    <div class="add-holding-inner">
+      <div class="add-holding-header">
+        <button type="button" class="chart-close" id="addHoldingClose" aria-label="닫기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+        <div class="add-holding-title">종목 담기</div>
+      </div>
+      <div class="add-holding-search-row" id="addHoldingSearchRow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" class="add-holding-search-input" id="addHoldingSearchInput" placeholder="종목명 또는 티커 검색" />
+      </div>
+      <div class="add-holding-results" id="addHoldingResults"></div>
+      <div class="add-holding-form" id="addHoldingForm" hidden>
+        <div class="add-holding-selected">
+          <div>
+            <div class="add-holding-selected-name" id="addHoldingSelectedName"></div>
+            <div class="add-holding-selected-kr" id="addHoldingSelectedKr"></div>
+          </div>
+          <div class="add-holding-change-btn" id="addHoldingChangeBtn">종목 변경</div>
+        </div>
+        <div class="add-holding-field">
+          <label for="addHoldingQty">수량</label>
+          <input type="number" step="any" min="0" id="addHoldingQty" placeholder="0" inputmode="decimal" />
+        </div>
+        <div class="add-holding-field">
+          <label for="addHoldingAvgPrice" id="addHoldingAvgPriceLabel">평균 매입가</label>
+          <input type="number" step="any" min="0" id="addHoldingAvgPrice" placeholder="0" inputmode="decimal" />
+        </div>
+        <button type="button" class="add-holding-submit" id="addHoldingSubmit">담기</button>
+      </div>
+    </div>
+  </div>
+
   <div class="nav-footer">
     <div class="bottom-nav-bar" id="bottomNavBar">
       <div class="nav-highlight" id="navHighlight"></div>
@@ -713,6 +1060,19 @@
   const navHomeBtn = document.getElementById('navHomeBtn');
   const navHighlightEl = document.getElementById('navHighlight');
   const bottomNavBarEl = document.getElementById('bottomNavBar');
+  const addHoldingPageEl = document.getElementById('addHoldingPage');
+  const addHoldingClose = document.getElementById('addHoldingClose');
+  const addHoldingSearchRowEl = document.getElementById('addHoldingSearchRow');
+  const addHoldingSearchInput = document.getElementById('addHoldingSearchInput');
+  const addHoldingResultsEl = document.getElementById('addHoldingResults');
+  const addHoldingFormEl = document.getElementById('addHoldingForm');
+  const addHoldingSelectedName = document.getElementById('addHoldingSelectedName');
+  const addHoldingSelectedKr = document.getElementById('addHoldingSelectedKr');
+  const addHoldingChangeBtn = document.getElementById('addHoldingChangeBtn');
+  const addHoldingQtyInput = document.getElementById('addHoldingQty');
+  const addHoldingAvgPriceInput = document.getElementById('addHoldingAvgPrice');
+  const addHoldingAvgPriceLabel = document.getElementById('addHoldingAvgPriceLabel');
+  const addHoldingSubmitBtn = document.getElementById('addHoldingSubmit');
 
   function moveNavHighlight(btn) {
     navHighlightEl.style.width = btn.offsetWidth + 'px';
@@ -795,6 +1155,17 @@
   let fullTickers = [];
   let rawTickers = [];
   let symbolMeta = {};
+  let watchlistEditMode = false;
+  let addHoldingSelected = null;
+  let holdings = [];
+  try {
+    holdings = JSON.parse(localStorage.getItem('tickr_holdings') || '[]');
+  } catch (e) {
+    holdings = [];
+  }
+  function saveHoldings() {
+    localStorage.setItem('tickr_holdings', JSON.stringify(holdings));
+  }
 
   function formatPrice(p) {
     const n = Number(p);
@@ -868,13 +1239,162 @@
 
   function renderCurrent() {
     if (view === 'home') {
-      listEl.innerHTML = '<div class="empty">홈 화면을 준비 중입니다</div>';
+      renderHome();
       return;
     }
     const filtered = fullTickers.filter(categoryFilter);
     filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
     rawTickers = mode === 'us' || mode === 'crypto' ? filtered.slice(0, TOP_N) : filtered;
     render(rawTickers);
+  }
+
+  function findTicker(symbol) {
+    return fullTickers.find((t) => t.symbol === symbol);
+  }
+
+  function holdingStats(h) {
+    const t = findTicker(h.symbol);
+    const lastPrice = t ? Number(t.lastPrice) : 0;
+    const changePct = t ? Number(t.priceChangePercent) : 0;
+    const valueUsd = h.qty * lastPrice;
+    const costUsd = h.qty * h.avgPriceUsd;
+    const pnlUsd = valueUsd - costUsd;
+    const pnlPct = costUsd ? (pnlUsd / costUsd) * 100 : 0;
+    return { lastPrice, changePct, valueUsd, costUsd, pnlUsd, pnlPct };
+  }
+
+  function drawSparkline(canvas, closes) {
+    if (!canvas || closes.length < 2) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!w || !h) return;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const min = Math.min(...closes);
+    const max = Math.max(...closes);
+    const range = max - min || 1;
+    const up = closes[closes.length - 1] >= closes[0];
+    const color = up ? '#2ecc71' : '#ff5c5c';
+    const pad = 3;
+    const usableH = h - pad * 2;
+    const points = closes.map((c, i) => {
+      const x = (i / (closes.length - 1)) * w;
+      const y = pad + (1 - (c - min) / range) * usableH;
+      return [x, y];
+    });
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    points.forEach(([x, y]) => ctx.lineTo(x, y));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  async function loadSparklines() {
+    const canvases = listEl.querySelectorAll('[data-sparkline]');
+    await Promise.all(
+      [...canvases].map(async (canvas) => {
+        const symbol = canvas.dataset.sparkline;
+        try {
+          const klines = await fetchJson(`${FAPI}/klines?symbol=${symbol}&interval=15m&limit=96`);
+          const closes = klines.map((k) => Number(k[4]));
+          drawSparkline(canvas, closes);
+        } catch (e) {
+          // leave blank on failure
+        }
+      }),
+    );
+  }
+
+  function renderHome() {
+    const stats = holdings.map((h) => ({ h, s: holdingStats(h) }));
+    const totalValueUsd = stats.reduce((sum, { s }) => sum + s.valueUsd, 0);
+    const totalCostUsd = stats.reduce((sum, { s }) => sum + s.costUsd, 0);
+    const totalPnlUsd = totalValueUsd - totalCostUsd;
+    const totalPnlPct = totalCostUsd ? (totalPnlUsd / totalCostUsd) * 100 : 0;
+    const pnlCls = totalPnlUsd > 0 ? 'up' : totalPnlUsd < 0 ? 'down' : '';
+    const pnlSign = totalPnlUsd > 0 ? '+' : totalPnlUsd < 0 ? '-' : '';
+
+    const portfolioHtml = `
+      <div class="home-card">
+        <div class="portfolio-label">내 보유 종목 평가금</div>
+        <div class="portfolio-total">${formatPrice(totalValueUsd)}</div>
+        ${
+          holdings.length
+            ? `<div class="portfolio-pnl ${pnlCls}">${pnlSign}${formatPrice(Math.abs(totalPnlUsd))} (${pnlSign}${Math.abs(totalPnlPct).toFixed(2)}%)</div>`
+            : `<div class="portfolio-empty-note">보유 종목을 담으면 실시간 손익이 표시돼요</div>`
+        }
+        <div class="add-holding-link" id="addHoldingLink">+ 종목 담기</div>
+      </div>
+    `;
+
+    const watchlistHtml = holdings.length
+      ? `
+      <div>
+        <div class="home-section-header">
+          <div class="home-section-title">관심 종목</div>
+          <div class="home-edit-link" id="watchlistEditLink">${watchlistEditMode ? '완료' : '편집'}</div>
+        </div>
+        <div class="watchlist-grid">
+          ${stats
+            .map(({ h, s }) => {
+              const name = displayName(h.symbol);
+              const kr = krName(name, h.cat);
+              const cls = s.changePct > 0 ? 'up' : s.changePct < 0 ? 'down' : '';
+              const sign = s.changePct > 0 ? '+' : '';
+              return `
+                <div class="watchlist-item" data-symbol="${h.symbol}" data-cat="${h.cat}">
+                  <div class="watchlist-item-top">
+                    <div class="watchlist-symbol">
+                      <div class="watchlist-symbol-name">${name}</div>
+                      ${kr ? `<div class="watchlist-symbol-kr">${kr}</div>` : ''}
+                    </div>
+                    ${watchlistEditMode ? `<button type="button" class="watchlist-remove-btn" data-remove="${h.symbol}">×</button>` : ''}
+                  </div>
+                  <canvas class="watchlist-sparkline" data-sparkline="${h.symbol}"></canvas>
+                  <div class="watchlist-price">${formatPrice(s.lastPrice)}</div>
+                  <div class="watchlist-change ${cls}">${sign}${s.changePct.toFixed(2)}%</div>
+                  <div class="watchlist-qty">보유 ${h.qty}</div>
+                </div>
+              `;
+            })
+            .join('')}
+        </div>
+      </div>
+    `
+      : '';
+
+    const clTicker = findTicker('CLUSDT');
+    const clChangePct = clTicker ? Number(clTicker.priceChangePercent) : 0;
+    const clCls = clChangePct > 0 ? 'up' : clChangePct < 0 ? 'down' : '';
+    const clSign = clChangePct > 0 ? '+' : '';
+
+    const indicatorsHtml = `
+      <div>
+        <div class="home-section-header">
+          <div class="home-section-title">지표</div>
+        </div>
+        <div class="indicators-grid">
+          <div class="indicator-card">
+            <div class="indicator-label">원/달러</div>
+            <div class="indicator-value">${krwRate ? Math.round(krwRate).toLocaleString('ko-KR') + '원' : '-'}</div>
+          </div>
+          <div class="indicator-card">
+            <div class="indicator-label">WTI 유가</div>
+            <div class="indicator-value">${clTicker ? '$' + Number(clTicker.lastPrice).toFixed(2) : '-'}</div>
+            ${clTicker ? `<div class="indicator-change ${clCls}">${clSign}${clChangePct.toFixed(2)}%</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+    listEl.innerHTML = portfolioHtml + watchlistHtml + indicatorsHtml;
+    if (holdings.length) loadSparklines();
   }
 
   function renderSearchRow(t, cat) {
@@ -920,6 +1440,63 @@
     searchPageListEl.innerHTML = matches.length
       ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
       : '<div class="empty">검색 결과가 없습니다</div>';
+  }
+
+  function openAddHolding() {
+    addHoldingSelected = null;
+    addHoldingSearchInput.value = '';
+    addHoldingResultsEl.innerHTML = '';
+    addHoldingResultsEl.style.display = '';
+    addHoldingSearchRowEl.style.display = '';
+    addHoldingFormEl.hidden = true;
+    addHoldingPageEl.classList.add('open');
+    addHoldingSearchInput.focus();
+  }
+
+  function closeAddHolding() {
+    addHoldingPageEl.classList.remove('open');
+  }
+
+  function renderAddHoldingResults(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      addHoldingResultsEl.innerHTML = '';
+      return;
+    }
+    const savedMode = mode;
+    const matches = [];
+    ALL_CATEGORIES.forEach((cat) => {
+      mode = cat;
+      fullTickers.filter(categoryFilter).forEach((t) => {
+        const name = displayName(t.symbol).toLowerCase();
+        const kr = (krName(displayName(t.symbol)) || '').toLowerCase();
+        if (name.includes(q) || kr.includes(q)) matches.push({ t, cat });
+      });
+    });
+    mode = savedMode;
+    matches.sort((a, b) => Number(b.t.quoteVolume) - Number(a.t.quoteVolume));
+    addHoldingResultsEl.innerHTML = matches.length
+      ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
+      : '<div class="empty">검색 결과가 없습니다</div>';
+  }
+
+  function selectAddHoldingSymbol(symbol, cat) {
+    addHoldingSelected = { symbol, cat };
+    const name = displayName(symbol);
+    const kr = krName(name, cat);
+    addHoldingSelectedName.textContent = name;
+    addHoldingSelectedKr.textContent = kr || CATEGORY_LABELS[cat];
+    addHoldingAvgPriceLabel.textContent = `평균 매입가 (${currency === 'KRW' ? '원' : '달러'})`;
+    const existing = holdings.find((h) => h.symbol === symbol);
+    addHoldingQtyInput.value = existing ? existing.qty : '';
+    addHoldingAvgPriceInput.value = existing
+      ? currency === 'KRW' && krwRate
+        ? Math.round(existing.avgPriceUsd * krwRate)
+        : existing.avgPriceUsd
+      : '';
+    addHoldingSearchRowEl.style.display = 'none';
+    addHoldingResultsEl.style.display = 'none';
+    addHoldingFormEl.hidden = false;
   }
 
   async function fetchJson(url) {
@@ -986,6 +1563,7 @@
     searchIconBtn.style.display = isHome ? 'none' : '';
     if (isHome) closeSearch();
     modeTabsEl.style.display = isHome ? 'none' : '';
+    listEl.classList.toggle('home-view', isHome);
   }
 
   function setMode(next) {
@@ -1283,6 +1861,27 @@
   }
 
   listEl.addEventListener('click', (e) => {
+    if (e.target.closest('#addHoldingLink')) {
+      openAddHolding();
+      return;
+    }
+    if (e.target.closest('#watchlistEditLink')) {
+      watchlistEditMode = !watchlistEditMode;
+      renderHome();
+      return;
+    }
+    const removeBtn = e.target.closest('.watchlist-remove-btn');
+    if (removeBtn) {
+      holdings = holdings.filter((h) => h.symbol !== removeBtn.dataset.remove);
+      saveHoldings();
+      renderHome();
+      return;
+    }
+    const watchItem = e.target.closest('.watchlist-item');
+    if (watchItem) {
+      openChart(watchItem.dataset.symbol, watchItem.dataset.cat);
+      return;
+    }
     const row = e.target.closest('.row');
     if (row) openChart(row.dataset.symbol, row.dataset.cat);
   });
@@ -1291,6 +1890,38 @@
     if (!row) return;
     closeSearch();
     openChart(row.dataset.symbol, row.dataset.cat);
+  });
+  addHoldingResultsEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.row');
+    if (row) selectAddHoldingSymbol(row.dataset.symbol, row.dataset.cat);
+  });
+  addHoldingChangeBtn.addEventListener('click', () => {
+    addHoldingSelected = null;
+    addHoldingFormEl.hidden = true;
+    addHoldingSearchRowEl.style.display = '';
+    addHoldingResultsEl.style.display = '';
+    addHoldingSearchInput.focus();
+  });
+  addHoldingSearchInput.addEventListener('input', () => {
+    renderAddHoldingResults(addHoldingSearchInput.value);
+  });
+  addHoldingSubmitBtn.addEventListener('click', () => {
+    if (!addHoldingSelected) return;
+    const qty = Number(addHoldingQtyInput.value);
+    const priceInput = Number(addHoldingAvgPriceInput.value);
+    if (!qty || qty <= 0 || !priceInput || priceInput <= 0) return;
+    const avgPriceUsd = currency === 'KRW' && krwRate ? priceInput / krwRate : priceInput;
+    const idx = holdings.findIndex((h) => h.symbol === addHoldingSelected.symbol);
+    const entry = { symbol: addHoldingSelected.symbol, cat: addHoldingSelected.cat, qty, avgPriceUsd };
+    if (idx >= 0) holdings[idx] = entry;
+    else holdings.push(entry);
+    saveHoldings();
+    closeAddHolding();
+    if (view === 'home') renderHome();
+  });
+  addHoldingClose.addEventListener('click', closeAddHolding);
+  addHoldingPageEl.addEventListener('click', (e) => {
+    if (e.target === addHoldingPageEl) closeAddHolding();
   });
   chartClose.addEventListener('click', closeChart);
   chartOverlay.addEventListener('click', (e) => {
