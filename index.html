@@ -929,7 +929,7 @@
       <div class="chart-ranges" id="chartRanges">
         <button type="button" class="chart-range-btn active" data-range="1D">1일</button>
         <button type="button" class="chart-range-btn" data-range="1W">1주</button>
-        <button type="button" class="chart-range-btn" data-range="3M">3개월</button>
+        <button type="button" class="chart-range-btn" data-range="3M">3달</button>
         <button type="button" class="chart-range-btn" data-range="1Y">1년</button>
         <button type="button" class="chart-range-btn" data-range="5Y">5년</button>
         <button type="button" class="chart-range-btn" data-range="ALL">전체</button>
@@ -1014,14 +1014,14 @@
   <div class="nav-footer">
     <div class="bottom-nav-bar" id="bottomNavBar">
       <div class="nav-highlight" id="navHighlight"></div>
-      <button type="button" class="nav-btn active" id="navAllBtn" aria-label="전체시세">
+      <button type="button" class="nav-btn" id="navAllBtn" aria-label="전체시세">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
           <rect x="3" y="12" width="4.5" height="9" rx="1" />
           <rect x="9.75" y="7" width="4.5" height="14" rx="1" />
           <rect x="16.5" y="3" width="4.5" height="18" rx="1" />
         </svg>
       </button>
-      <button type="button" class="nav-btn" id="navHomeBtn" aria-label="홈">
+      <button type="button" class="nav-btn active" id="navHomeBtn" aria-label="홈">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
           <path d="M11.47 3.84a.75.75 0 0 1 1.06 0l8.69 8.69a.75.75 0 1 1-1.06 1.06l-.97-.97V19.5a2.25 2.25 0 0 1-2.25 2.25h-10a2.25 2.25 0 0 1-2.25-2.25v-6.88l-.97.97a.75.75 0 1 1-1.06-1.06l8.69-8.69Z" />
         </svg>
@@ -1149,7 +1149,7 @@
   };
 
   let mode = 'domestic';
-  let view = 'all';
+  let view = 'home';
   let currency = 'KRW';
   let krwRate = null;
   let fullTickers = [];
@@ -1393,7 +1393,41 @@
       </div>
     `;
 
-    listEl.innerHTML = portfolioHtml + watchlistHtml + indicatorsHtml;
+    const FNG_LABELS_KR = {
+      'Extreme Fear': '극단적 공포',
+      Fear: '공포',
+      Neutral: '중립',
+      Greed: '탐욕',
+      'Extreme Greed': '극단적 탐욕',
+    };
+    const fngCls = cryptoFearGreed
+      ? cryptoFearGreed.label.includes('Fear')
+        ? 'down'
+        : cryptoFearGreed.label.includes('Greed')
+          ? 'up'
+          : ''
+      : '';
+
+    const fearGreedHtml = `
+      <div>
+        <div class="home-section-header">
+          <div class="home-section-title">공포·탐욕 지수</div>
+        </div>
+        <div class="indicators-grid">
+          <div class="indicator-card">
+            <div class="indicator-label">주식</div>
+            <div class="indicator-value">준비 중</div>
+          </div>
+          <div class="indicator-card">
+            <div class="indicator-label">코인</div>
+            <div class="indicator-value">${cryptoFearGreed ? cryptoFearGreed.value : '-'}</div>
+            ${cryptoFearGreed ? `<div class="indicator-change ${fngCls}">${FNG_LABELS_KR[cryptoFearGreed.label] || cryptoFearGreed.label}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+    listEl.innerHTML = portfolioHtml + watchlistHtml + indicatorsHtml + fearGreedHtml;
     if (holdings.length) loadSparklines();
   }
 
@@ -1514,6 +1548,21 @@
     }
   }
 
+  let cryptoFearGreed = null;
+
+  async function loadFearGreed() {
+    try {
+      const data = await fetchJson('https://api.alternative.me/fng/?limit=1');
+      const entry = data && data.data && data.data[0];
+      if (entry) {
+        cryptoFearGreed = { value: Number(entry.value), label: entry.value_classification };
+        if (view === 'home') renderHome();
+      }
+    } catch (e) {
+      // keep previous value on failure
+    }
+  }
+
   async function loadMeta() {
     const data = await fetchJson(`${FAPI}/exchangeInfo`);
     data.symbols.forEach((s) => {
@@ -1596,6 +1645,7 @@
   }
 
   moveNavHighlight(view === 'home' ? navHomeBtn : navAllBtn);
+  applyViewVisibility();
   setTimeout(() => bottomNavBarEl.classList.add('ready'), 500);
 
   modeTabsEl.addEventListener('click', (e) => {
@@ -1655,6 +1705,8 @@
 
   loadFxRate();
   setInterval(loadFxRate, FX_REFRESH_MS);
+  loadFearGreed();
+  setInterval(loadFearGreed, FX_REFRESH_MS);
   loadMeta().then(refreshAll);
   setInterval(refreshAll, REFRESH_MS);
 
