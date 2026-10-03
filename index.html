@@ -81,7 +81,7 @@
     position: relative;
     z-index: 1;
     width: 92px;
-    height: 54px;
+    height: 42px;
     border: none;
     border-radius: 999px;
     background: transparent;
@@ -144,11 +144,20 @@
     background: var(--accent);
     color: #04201d;
   }
-  .updated {
-    font-size: 11px;
+  .search-icon-btn {
+    width: 30px;
+    height: 24px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--panel);
     color: var(--ink-sub);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .search-wrap {
+    margin-bottom: 12px;
   }
   .mode-tabs {
     display: flex;
@@ -166,7 +175,7 @@
     background: var(--panel);
     color: var(--ink-sub);
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
@@ -179,14 +188,13 @@
   .search-input {
     width: 100%;
     height: 40px;
-    margin-bottom: 12px;
     padding: 0 14px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: var(--panel);
     color: var(--ink);
     font-family: inherit;
-    font-size: 14px;
+    font-size: 16px;
     box-sizing: border-box;
   }
   .search-input::placeholder {
@@ -378,8 +386,16 @@
           <button type="button" class="currency-btn" data-currency="USD">$</button>
           <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
         </div>
-        <div class="updated" id="updatedAt">불러오는 중...</div>
+        <button type="button" class="search-icon-btn" id="searchIconBtn" aria-label="검색">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
       </div>
+    </div>
+    <div class="search-wrap" id="searchWrap" hidden>
+      <input type="text" class="search-input" id="searchInput" placeholder="종목 검색 (티커 또는 한글 이름)" />
     </div>
     <div class="mode-tabs" id="modeTabs">
       <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
@@ -388,11 +404,10 @@
       <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
       <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
     </div>
-    <input type="text" class="search-input" id="searchInput" placeholder="종목 검색 (티커 또는 한글 이름)" />
     <div class="list" id="list">
       <div class="empty">불러오는 중...</div>
     </div>
-    <div class="footer-note" id="footerNote">바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신</div>
+    <div class="footer-note" id="updatedAt">불러오는 중...</div>
   </div>
 
   <div class="chart-overlay" id="chartOverlay">
@@ -446,9 +461,10 @@
 
   const listEl = document.getElementById('list');
   const updatedAtEl = document.getElementById('updatedAt');
-  const footerNoteEl = document.getElementById('footerNote');
   const modeTabsEl = document.getElementById('modeTabs');
   const searchInputEl = document.getElementById('searchInput');
+  const searchWrapEl = document.getElementById('searchWrap');
+  const searchIconBtn = document.getElementById('searchIconBtn');
   const currencyToggleEl = document.getElementById('currencyToggle');
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
@@ -674,20 +690,15 @@
     updatedAtEl.textContent = `${hh}:${mm}:${ss} 기준`;
   }
 
-  const FOOTER_NOTES = {
-    domestic: '바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신',
-    us: '바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신',
-    leverage: '바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신',
-    crypto: '바이낸스 선물(USDT 무기한 계약) 공개 API 기준 · 5초마다 갱신',
-    index: '지수 ETF·원자재·금 토큰 기준 · 5초마다 갱신',
-  };
-  const HOME_FOOTER_NOTE = '';
+  function closeSearch() {
+    searchWrapEl.hidden = true;
+  }
 
   function applyViewVisibility() {
     const isHome = view === 'home';
     modeTabsEl.style.display = isHome ? 'none' : '';
-    searchInputEl.style.display = isHome ? 'none' : '';
-    footerNoteEl.textContent = isHome ? HOME_FOOTER_NOTE : FOOTER_NOTES[mode];
+    searchIconBtn.style.display = isHome ? 'none' : '';
+    if (isHome) closeSearch();
   }
 
   function setMode(next) {
@@ -727,6 +738,11 @@
   searchInputEl.addEventListener('input', () => {
     searchQuery = searchInputEl.value.trim();
     renderCurrent();
+  });
+
+  searchIconBtn.addEventListener('click', () => {
+    searchWrapEl.hidden = !searchWrapEl.hidden;
+    if (!searchWrapEl.hidden) searchInputEl.focus();
   });
 
   currencyToggleEl.addEventListener('click', (e) => {
