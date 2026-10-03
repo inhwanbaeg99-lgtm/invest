@@ -174,29 +174,28 @@
   }
   .mode-tabs {
     display: flex;
-    flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mode-tabs::-webkit-scrollbar {
+    display: none;
   }
   .mode-tab {
-    flex: 1 1 auto;
-    min-width: 0;
+    flex: 0 0 auto;
     height: 36px;
-    padding: 0 8px;
+    padding: 0 16px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: var(--panel);
     color: var(--ink-sub);
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
-  }
-  @media (min-width: 768px) {
-    .mode-tab {
-      font-size: 12.5px;
-    }
   }
   .mode-tab.active {
     background: var(--accent);
@@ -300,11 +299,18 @@
     z-index: 100;
     background: var(--bg);
     display: none;
-    flex-direction: column;
-    padding: max(20px, env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+    justify-content: center;
+    padding: max(20px, env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
   }
   .chart-overlay.open {
     display: flex;
+  }
+  .chart-inner {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
   }
   .chart-modal-header {
     display: flex;
@@ -316,6 +322,12 @@
   .chart-symbol {
     font-size: 20px;
     font-weight: 800;
+  }
+  .chart-symbol-kr {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-sub);
+    margin-top: 2px;
   }
   .chart-close {
     width: 36px;
@@ -353,7 +365,14 @@
   .chart-canvas-wrap {
     position: relative;
     flex: 1;
-    min-height: 220px;
+    min-height: 180px;
+    max-height: 320px;
+    touch-action: pan-y;
+  }
+  @media (max-width: 767px) {
+    .chart-canvas-wrap {
+      flex: 0 0 220px;
+    }
   }
   #chartCanvas {
     width: 100%;
@@ -369,6 +388,26 @@
     color: var(--ink-sub);
     font-size: 13px;
   }
+  .chart-scrub-label {
+    position: absolute;
+    top: 0;
+    display: none;
+    pointer-events: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 10px;
+  }
+  .scrub-date {
+    font-size: 11px;
+    color: var(--ink-sub);
+  }
+  .scrub-price {
+    font-size: 15px;
+    font-weight: 800;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
   .chart-ranges {
     display: flex;
     gap: 6px;
@@ -377,7 +416,9 @@
   }
   .chart-range-btn {
     flex: 1;
+    min-width: 0;
     height: 36px;
+    padding: 0;
     border: none;
     border-radius: 8px;
     background: var(--panel);
@@ -427,29 +468,38 @@
   </div>
 
   <div class="chart-overlay" id="chartOverlay">
-    <div class="chart-modal-header">
-      <button type="button" class="chart-close" id="chartClose" aria-label="뒤로">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
-      <div class="chart-symbol" id="chartSymbol">BTC</div>
-    </div>
-    <div class="chart-price-row">
-      <div class="chart-price" id="chartPrice">$0</div>
-      <div class="chart-change" id="chartChange">+0.00%</div>
-    </div>
-    <div class="chart-canvas-wrap">
-      <canvas id="chartCanvas"></canvas>
-      <div class="chart-loading" id="chartLoading">불러오는 중...</div>
-    </div>
-    <div class="chart-ranges" id="chartRanges">
-      <button type="button" class="chart-range-btn active" data-range="1D">1일</button>
-      <button type="button" class="chart-range-btn" data-range="1W">1주</button>
-      <button type="button" class="chart-range-btn" data-range="3M">3개월</button>
-      <button type="button" class="chart-range-btn" data-range="1Y">1년</button>
-      <button type="button" class="chart-range-btn" data-range="5Y">5년</button>
-      <button type="button" class="chart-range-btn" data-range="ALL">전체</button>
+    <div class="chart-inner">
+      <div class="chart-modal-header">
+        <button type="button" class="chart-close" id="chartClose" aria-label="뒤로">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <div>
+          <div class="chart-symbol" id="chartSymbol">BTC</div>
+          <div class="chart-symbol-kr" id="chartSymbolKr"></div>
+        </div>
+      </div>
+      <div class="chart-price-row">
+        <div class="chart-price" id="chartPrice">$0</div>
+        <div class="chart-change" id="chartChange">+0.00%</div>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="chartCanvas"></canvas>
+        <div class="chart-loading" id="chartLoading">불러오는 중...</div>
+        <div class="chart-scrub-label" id="chartScrubLabel">
+          <div class="scrub-date" id="scrubDate"></div>
+          <div class="scrub-price" id="scrubPrice"></div>
+        </div>
+      </div>
+      <div class="chart-ranges" id="chartRanges">
+        <button type="button" class="chart-range-btn active" data-range="1D">1일</button>
+        <button type="button" class="chart-range-btn" data-range="1W">1주</button>
+        <button type="button" class="chart-range-btn" data-range="3M">3개월</button>
+        <button type="button" class="chart-range-btn" data-range="1Y">1년</button>
+        <button type="button" class="chart-range-btn" data-range="5Y">5년</button>
+        <button type="button" class="chart-range-btn" data-range="ALL">전체</button>
+      </div>
     </div>
   </div>
 
@@ -582,20 +632,12 @@
     return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 6 });
   }
 
-  function formatVolume(v) {
-    const n = Number(v);
-    if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-    return n.toFixed(0);
-  }
-
   function displayName(symbol) {
     return symbol.replace(/USDT$/, '');
   }
 
-  function krName(name) {
-    return (KR_NAMES[mode] || {})[name];
+  function krName(name, cat) {
+    return (KR_NAMES[cat || mode] || {})[name];
   }
 
   function categoryFilter(t) {
@@ -628,11 +670,11 @@
         const name = displayName(t.symbol);
         const kr = krName(name);
         return `
-          <div class="row" data-symbol="${t.symbol}">
+          <div class="row" data-symbol="${t.symbol}" data-cat="${mode}">
             <div class="rank">${i + 1}</div>
             <div class="coin">
               <div class="coin-symbol">${name}</div>
-              <div class="coin-vol">${kr ? kr + ' · ' : ''}거래대금 ${formatVolume(t.quoteVolume)}</div>
+              ${kr ? `<div class="coin-vol">${kr}</div>` : ''}
             </div>
             <div class="price">${formatPrice(t.lastPrice)}</div>
             <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
@@ -671,10 +713,10 @@
     const kr = krName(name);
     mode = savedMode;
     return `
-      <div class="row search-row-item" data-symbol="${t.symbol}">
+      <div class="row search-row-item" data-symbol="${t.symbol}" data-cat="${cat}">
         <div class="coin">
           <div class="coin-symbol">${name}</div>
-          <div class="coin-vol">${CATEGORY_LABELS[cat]}${kr ? ' · ' + kr : ''} · 거래대금 ${formatVolume(t.quoteVolume)}</div>
+          <div class="coin-vol">${CATEGORY_LABELS[cat]}${kr ? ' · ' + kr : ''}</div>
         </div>
         <div class="price">${formatPrice(t.lastPrice)}</div>
         <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
@@ -842,11 +884,15 @@
   const chartOverlay = document.getElementById('chartOverlay');
   const chartClose = document.getElementById('chartClose');
   const chartSymbolEl = document.getElementById('chartSymbol');
+  const chartSymbolKrEl = document.getElementById('chartSymbolKr');
   const chartPriceEl = document.getElementById('chartPrice');
   const chartChangeEl = document.getElementById('chartChange');
   const chartCanvas = document.getElementById('chartCanvas');
   const chartLoadingEl = document.getElementById('chartLoading');
   const chartRangesEl = document.getElementById('chartRanges');
+  const chartScrubLabelEl = document.getElementById('chartScrubLabel');
+  const scrubDateEl = document.getElementById('scrubDate');
+  const scrubPriceEl = document.getElementById('scrubPrice');
   const ctx = chartCanvas.getContext('2d');
 
   const RANGES = {
@@ -860,8 +906,11 @@
 
   let currentSymbol = null;
   let currentRange = '1D';
+  let chartCloses = [];
+  let chartTimes = [];
+  let scrubbing = false;
 
-  function drawChart(closes) {
+  function drawChart(closes, hoverIdx) {
     const wrap = chartCanvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
     const w = wrap.clientWidth;
@@ -908,17 +957,91 @@
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
+
+    if (hoverIdx != null && points[hoverIdx]) {
+      const [hx, hy] = points[hoverIdx];
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hx, 0);
+      ctx.lineTo(hx, h);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#0a0b0d';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
   }
+
+  function formatScrubDate(ts) {
+    const d = new Date(ts);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    if (currentRange === '1D' || currentRange === '1W') {
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mi = String(d.getMinutes()).padStart(2, '0');
+      return `${mm}/${dd} ${hh}:${mi}`;
+    }
+    return `${d.getFullYear()}.${mm}.${dd}`;
+  }
+
+  function scrubAt(clientX) {
+    if (chartCloses.length < 2) return;
+    const rect = chartCanvas.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    let idx = Math.round((x / rect.width) * (chartCloses.length - 1));
+    idx = Math.max(0, Math.min(chartCloses.length - 1, idx));
+    drawChart(chartCloses, idx);
+    scrubDateEl.textContent = formatScrubDate(chartTimes[idx]);
+    scrubPriceEl.textContent = formatPrice(chartCloses[idx]);
+    chartScrubLabelEl.style.display = 'block';
+    const lw = chartScrubLabelEl.offsetWidth;
+    const hx = (idx / (chartCloses.length - 1)) * rect.width;
+    const left = Math.max(4, Math.min(rect.width - lw - 4, hx - lw / 2));
+    chartScrubLabelEl.style.left = `${left}px`;
+  }
+
+  function endScrub() {
+    if (!scrubbing) return;
+    scrubbing = false;
+    chartScrubLabelEl.style.display = 'none';
+    drawChart(chartCloses);
+  }
+
+  chartCanvas.addEventListener('mousedown', (e) => {
+    scrubbing = true;
+    scrubAt(e.clientX);
+  });
+  chartCanvas.addEventListener('mousemove', (e) => {
+    if (scrubbing) scrubAt(e.clientX);
+  });
+  window.addEventListener('mouseup', endScrub);
+  chartCanvas.addEventListener('touchstart', (e) => {
+    scrubbing = true;
+    scrubAt(e.touches[0].clientX);
+  }, { passive: true });
+  chartCanvas.addEventListener('touchmove', (e) => {
+    if (scrubbing) scrubAt(e.touches[0].clientX);
+  }, { passive: true });
+  chartCanvas.addEventListener('touchend', endScrub);
 
   async function loadChart() {
     if (!currentSymbol) return;
     chartLoadingEl.style.display = 'flex';
+    chartScrubLabelEl.style.display = 'none';
     const { interval, limit } = RANGES[currentRange];
     try {
       const klines = await fetchJson(
         `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`,
       );
       const closes = klines.map((k) => Number(k[4]));
+      const times = klines.map((k) => Number(k[0]));
       const first = closes[0];
       const last = closes[closes.length - 1];
       const changePct = ((last - first) / first) * 100;
@@ -927,6 +1050,8 @@
       chartPriceEl.textContent = formatPrice(last);
       chartChangeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
       chartChangeEl.className = `chart-change ${cls}`;
+      chartCloses = closes;
+      chartTimes = times;
       drawChart(closes);
     } catch (e) {
       chartLoadingEl.textContent = '차트를 불러오지 못했습니다';
@@ -936,13 +1061,17 @@
     chartLoadingEl.style.display = 'none';
   }
 
-  function openChart(symbol) {
+  function openChart(symbol, cat) {
     currentSymbol = symbol;
     currentRange = '1D';
     chartRangesEl.querySelectorAll('.chart-range-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.range === currentRange);
     });
-    chartSymbolEl.textContent = displayName(symbol);
+    const name = displayName(symbol);
+    chartSymbolEl.textContent = name;
+    const kr = krName(name, cat);
+    chartSymbolKrEl.textContent = kr || '';
+    chartSymbolKrEl.style.display = kr ? '' : 'none';
     chartOverlay.classList.add('open');
     loadChart();
   }
@@ -954,7 +1083,7 @@
 
   listEl.addEventListener('click', (e) => {
     const row = e.target.closest('.row');
-    if (row) openChart(row.dataset.symbol);
+    if (row) openChart(row.dataset.symbol, row.dataset.cat);
   });
   chartClose.addEventListener('click', closeChart);
   chartOverlay.addEventListener('click', (e) => {
