@@ -303,6 +303,40 @@
   const STOCK_SYMBOLS = STOCK_BASES.map((b) => b + 'USDT');
   const STOCK_BASE_SET = new Set(STOCK_BASES);
 
+  const COIN_KR_NAMES = {
+    BTC: '비트코인', ETH: '이더리움', SOL: '솔라나', XRP: '리플', ZEC: '지캐시',
+    NEAR: '니어프로토콜', SUI: '수이', WLD: '월드코인', SAND: '샌드박스', BNB: '바이낸스코인',
+    DOGE: '도지코인', QNT: '퀀트', UNI: '유니스왑', AVAX: '아발란체', TAO: '비트텐서',
+    ADA: '에이다', TRX: '트론', LINK: '체인링크', DOT: '폴카닷', MATIC: '폴리곤',
+    POL: '폴리곤', LTC: '라이트코인', SHIB: '시바이누', ATOM: '코스모스', ETC: '이더리움클래식',
+    XLM: '스텔라루멘', BCH: '비트코인캐시', APT: '앱토스', ARB: '아비트럼', OP: '옵티미즘',
+    FIL: '파일코인', HBAR: '헤데라', VET: '비체인', ICP: '인터넷컴퓨터', INJ: '인젝티브',
+    RENDER: '렌더', FET: '페치AI', RUNE: '토르체인', ALGO: '알고랜드', GRT: '더그래프',
+    SEI: '세이', TIA: '셀레스티아', STX: '스택스', IMX: '이뮤터블', AAVE: '에이브',
+    MKR: '메이커', LDO: '라이도', CRV: '커브', SNX: '신세틱스', COMP: '컴파운드',
+    ENJ: '엔진코인', CHZ: '칠리즈', MANA: '디센트럴랜드', AXS: '엑시인피니티', GALA: '갤럭시',
+    FLOW: '플로우', EOS: '이오스', XTZ: '테조스', THETA: '세타토큰', XMR: '모네로',
+    DASH: '대시', NEO: '네오', IOTA: '아이오타', KSM: '쿠사마', ZIL: '질리카',
+    WAVES: '웨이브', ONE: '하모니', CELO: '셀로', KAVA: '카바', EGLD: '엘론드',
+    FTM: '팬텀', ROSE: '오아시스', GMT: '스텝앤', APE: '에이프코인', PEPE: '페페',
+    BONK: '봉크', WIF: '도지위프햇', FLOKI: '플로키', ORDI: '오디널스', TON: '톤코인',
+    JUP: '주피터', PYTH: '피스네트워크', JTO: '지토', STRK: '스타크넷', DYDX: '디와이디엑스',
+    ENA: '에테나', W: '웜홀', ONDO: '온도파이낸스', PENDLE: '펜들', NOT: '낫코인',
+    BOME: '북오브밈',
+  };
+
+  const STOCK_KR_NAMES = {
+    AAPL: '애플', TSLA: '테슬라', NVDA: '엔비디아', MSFT: '마이크로소프트', META: '메타',
+    GOOGL: '알파벳(구글)', AMZN: '아마존', NFLX: '넷플릭스', ORCL: '오라클', ADBE: '어도비',
+    CRM: '세일즈포스', IBM: 'IBM', INTC: '인텔', QCOM: '퀄컴', AVGO: '브로드컴',
+    AMD: 'AMD', AMAT: '어플라이드머티리얼즈', ASML: 'ASML', TSM: 'TSMC', DELL: '델',
+    PYPL: '페이팔', GS: '골드만삭스', BABA: '알리바바', COIN: '코인베이스', MSTR: '마이크로스트래티지',
+    HOOD: '로빈후드', PLTR: '팔란티어', CRWD: '크라우드스트라이크', SMCI: '슈퍼마이크로', NOK: '노키아',
+    WDC: '웨스턴디지털', STX: '시게이트', ZM: '줌', AMC: 'AMC', GME: '게임스탑',
+    DJT: '트럼프미디어', RDDT: '레딧', PDD: '핀둬둬', HIMS: '힘스앤허스', ARM: 'ARM홀딩스',
+    MRVL: '마벨', GLW: '코닝', MRNA: '모더나', SPY: 'S&P500 ETF', QQQ: '나스닥100 ETF',
+  };
+
   let mode = 'coin';
   let topSymbols = [];
 
@@ -326,18 +360,24 @@
     return mode === 'stock' ? base.replace(/B$/, '') : base;
   }
 
+  function krName(name) {
+    return mode === 'stock' ? STOCK_KR_NAMES[name] : COIN_KR_NAMES[name];
+  }
+
   function render(tickers) {
     listEl.innerHTML = tickers
       .map((t, i) => {
         const changeNum = Number(t.priceChangePercent);
         const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
         const sign = changeNum > 0 ? '+' : '';
+        const name = displayName(t.symbol);
+        const kr = krName(name);
         return `
           <div class="row" data-symbol="${t.symbol}">
             <div class="rank">${i + 1}</div>
             <div class="coin">
-              <div class="coin-symbol">${displayName(t.symbol)}</div>
-              <div class="coin-vol">거래대금 ${formatVolume(t.quoteVolume)}</div>
+              <div class="coin-symbol">${name}</div>
+              <div class="coin-vol">${kr ? kr + ' · ' : ''}거래대금 ${formatVolume(t.quoteVolume)}</div>
             </div>
             <div class="price">$${formatPrice(t.lastPrice)}</div>
             <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
