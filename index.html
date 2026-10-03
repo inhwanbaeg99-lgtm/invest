@@ -81,7 +81,7 @@
     position: relative;
     z-index: 1;
     width: 92px;
-    height: 42px;
+    height: 46px;
     border: none;
     border-radius: 999px;
     background: transparent;
@@ -99,12 +99,27 @@
     opacity: 0.3;
     cursor: default;
   }
+  .top-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(to bottom, var(--bg) 55%, transparent 100%);
+    padding-top: 28px;
+    padding-bottom: 16px;
+    margin-top: -28px;
+    margin-bottom: -16px;
+  }
   .header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     margin-bottom: 14px;
     gap: 12px;
+  }
+  .title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
   .title {
     font-size: 30px;
@@ -114,13 +129,6 @@
   .title span {
     color: var(--accent);
   }
-  .header-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-    flex: 0 0 auto;
-  }
   .currency-toggle {
     display: flex;
     background: var(--panel);
@@ -129,14 +137,14 @@
     padding: 2px;
   }
   .currency-btn {
-    width: 30px;
-    height: 24px;
+    width: 33px;
+    height: 27px;
     border: none;
     border-radius: 999px;
     background: transparent;
     color: var(--ink-sub);
     font-family: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
   }
@@ -145,8 +153,9 @@
     color: #04201d;
   }
   .search-icon-btn {
-    width: 30px;
-    height: 24px;
+    width: 33px;
+    height: 27px;
+    flex: 0 0 auto;
     border: 1px solid var(--line);
     border-radius: 999px;
     background: var(--panel);
@@ -379,30 +388,32 @@
 <body>
 
   <div class="wrap">
-    <div class="header">
-      <div class="title" id="modeTitle">Tickr</div>
-      <div class="header-right">
-        <div class="currency-toggle" id="currencyToggle">
-          <button type="button" class="currency-btn" data-currency="USD">$</button>
-          <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
+    <div class="top-header">
+      <div class="header">
+        <div class="title-group">
+          <div class="title" id="modeTitle">Tickr</div>
+          <div class="currency-toggle" id="currencyToggle">
+            <button type="button" class="currency-btn" data-currency="USD">$</button>
+            <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
+          </div>
         </div>
         <button type="button" class="search-icon-btn" id="searchIconBtn" aria-label="검색">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </button>
       </div>
-    </div>
-    <div class="search-wrap" id="searchWrap" hidden>
-      <input type="text" class="search-input" id="searchInput" placeholder="종목 검색 (티커 또는 한글 이름)" />
-    </div>
-    <div class="mode-tabs" id="modeTabs">
-      <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
-      <button type="button" class="mode-tab" data-mode="us">미국주식</button>
-      <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
-      <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
-      <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
+      <div class="search-wrap" id="searchWrap" hidden>
+        <input type="text" class="search-input" id="searchInput" placeholder="종목 검색 (티커 또는 한글 이름)" />
+      </div>
+      <div class="mode-tabs" id="modeTabs">
+        <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
+        <button type="button" class="mode-tab" data-mode="us">미국주식</button>
+        <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
+        <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
+        <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
+      </div>
     </div>
     <div class="list" id="list">
       <div class="empty">불러오는 중...</div>
