@@ -45,16 +45,16 @@
     z-index: 60;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 6px;
+    padding: 4px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
   .nav-btn {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     border: none;
     border-radius: 999px;
     background: transparent;
@@ -391,7 +391,7 @@
   </div>
 
   <div class="bottom-nav-bar">
-    <button type="button" class="nav-btn" id="navAllBtn" aria-label="전체시세">
+    <button type="button" class="nav-btn active" id="navAllBtn" aria-label="전체시세">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7" />
         <rect x="14" y="3" width="7" height="7" />
@@ -399,7 +399,7 @@
         <rect x="14" y="14" width="7" height="7" />
       </svg>
     </button>
-    <button type="button" class="nav-btn active" id="navHomeBtn" aria-label="홈">
+    <button type="button" class="nav-btn" id="navHomeBtn" aria-label="홈">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 11l9-8 9 8" />
         <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
@@ -491,12 +491,8 @@
     },
   };
 
-  const CATEGORY_LABELS = {
-    domestic: '국내주식', us: '미국주식', leverage: '레버리지', crypto: '가상화폐', index: '지수·원자재',
-  };
-
   let mode = 'domestic';
-  let view = 'home';
+  let view = 'all';
   let currency = 'KRW';
   let krwRate = null;
   let fullTickers = [];
@@ -592,29 +588,9 @@
     listEl.innerHTML = renderRows(tickers);
   }
 
-  function renderAllView() {
-    const categories = ['domestic', 'us', 'leverage', 'crypto', 'index'];
-    const savedMode = mode;
-    let html = '';
-    let any = false;
-    categories.forEach((cat) => {
-      mode = cat;
-      let filtered = fullTickers.filter(categoryFilter);
-      filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
-      filtered = applySearch(filtered).slice(0, 5);
-      if (!filtered.length) return;
-      any = true;
-      html += `<div class="group-label">${CATEGORY_LABELS[cat]}</div>` + renderRows(filtered);
-    });
-    mode = savedMode;
-    listEl.innerHTML = any
-      ? html
-      : `<div class="empty">${searchQuery ? '검색 결과가 없습니다' : '불러오는 중...'}</div>`;
-  }
-
   function renderCurrent() {
-    if (view === 'all') {
-      renderAllView();
+    if (view === 'home') {
+      listEl.innerHTML = '<div class="empty">홈 화면을 준비 중입니다</div>';
       return;
     }
     const filtered = fullTickers.filter(categoryFilter);
@@ -672,20 +648,26 @@
     crypto: '바이낸스 선물(USDT 무기한 계약) 공개 API 기준 · 5초마다 갱신',
     index: '지수 ETF·원자재·금 토큰 기준 · 5초마다 갱신',
   };
-  const ALL_VIEW_FOOTER_NOTE = '카테고리별 거래대금 상위 5개씩 모아보기 · 5초마다 갱신';
+  const HOME_FOOTER_NOTE = '';
+
+  function applyViewVisibility() {
+    const isHome = view === 'home';
+    modeTabsEl.style.display = isHome ? 'none' : '';
+    searchInputEl.style.display = isHome ? 'none' : '';
+    footerNoteEl.textContent = isHome ? HOME_FOOTER_NOTE : FOOTER_NOTES[mode];
+  }
 
   function setMode(next) {
-    view = 'home';
-    navHomeBtn.classList.add('active');
-    navAllBtn.classList.remove('active');
-    modeTabsEl.style.display = '';
+    view = 'all';
+    navAllBtn.classList.add('active');
+    navHomeBtn.classList.remove('active');
     if (mode !== next) {
       mode = next;
       modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
         b.classList.toggle('active', b.dataset.mode === mode);
       });
     }
-    footerNoteEl.textContent = FOOTER_NOTES[mode];
+    applyViewVisibility();
     renderCurrent();
   }
 
@@ -694,8 +676,7 @@
     view = next;
     navHomeBtn.classList.toggle('active', view === 'home');
     navAllBtn.classList.toggle('active', view === 'all');
-    modeTabsEl.style.display = view === 'all' ? 'none' : '';
-    footerNoteEl.textContent = view === 'all' ? ALL_VIEW_FOOTER_NOTE : FOOTER_NOTES[mode];
+    applyViewVisibility();
     renderCurrent();
   }
 
