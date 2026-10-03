@@ -52,9 +52,27 @@
     padding: 4px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   }
+  .nav-highlight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-highlight {
+      transition: none;
+    }
+  }
   .nav-btn {
-    width: 52px;
-    height: 52px;
+    position: relative;
+    z-index: 1;
+    width: 72px;
+    height: 54px;
     border: none;
     border-radius: 999px;
     background: transparent;
@@ -63,9 +81,9 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: color 0.3s ease;
   }
   .nav-btn.active {
-    background: var(--accent);
     color: #04201d;
   }
   .nav-btn.nav-btn-disabled {
@@ -391,6 +409,7 @@
   </div>
 
   <div class="bottom-nav-bar">
+    <div class="nav-highlight" id="navHighlight"></div>
     <button type="button" class="nav-btn active" id="navAllBtn" aria-label="전체시세">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="7" height="7" />
@@ -426,6 +445,13 @@
   const currencyToggleEl = document.getElementById('currencyToggle');
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
+  const navHighlightEl = document.getElementById('navHighlight');
+
+  function moveNavHighlight(btn) {
+    navHighlightEl.style.width = btn.offsetWidth + 'px';
+    navHighlightEl.style.height = btn.offsetHeight + 'px';
+    navHighlightEl.style.transform = `translate(${btn.offsetLeft}px, ${btn.offsetTop}px)`;
+  }
 
   // 레버리지/인버스 ETF와 지수 추종 ETF는 바이낸스 선물 API에서 EQUITY로 묶여 있어서 직접 분리
   const LEVERAGE_TICKERS = new Set(['SOXL', 'SOXS', 'TQQQ', 'SQQQ', 'KORU', 'RAM', 'RAMZ', 'UVXY']);
@@ -676,9 +702,12 @@
     view = next;
     navHomeBtn.classList.toggle('active', view === 'home');
     navAllBtn.classList.toggle('active', view === 'all');
+    moveNavHighlight(view === 'home' ? navHomeBtn : navAllBtn);
     applyViewVisibility();
     renderCurrent();
   }
+
+  moveNavHighlight(view === 'home' ? navHomeBtn : navAllBtn);
 
   modeTabsEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.mode-tab');
