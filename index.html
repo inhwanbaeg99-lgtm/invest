@@ -63,6 +63,11 @@
     border-radius: 999px;
     padding: 4px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .bottom-nav-bar.ready {
+    opacity: 1;
   }
   .nav-highlight {
     position: absolute;
@@ -647,7 +652,7 @@
     </div>
   </div>
 
-  <div class="bottom-nav-bar">
+  <div class="bottom-nav-bar" id="bottomNavBar">
     <div class="nav-highlight" id="navHighlight"></div>
     <button type="button" class="nav-btn active" id="navAllBtn" aria-label="전체시세">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -689,6 +694,7 @@
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
   const navHighlightEl = document.getElementById('navHighlight');
+  const bottomNavBarEl = document.getElementById('bottomNavBar');
 
   function moveNavHighlight(btn) {
     navHighlightEl.style.width = btn.offsetWidth + 'px';
@@ -994,6 +1000,7 @@
   }
 
   moveNavHighlight(view === 'home' ? navHomeBtn : navAllBtn);
+  setTimeout(() => bottomNavBarEl.classList.add('ready'), 500);
 
   modeTabsEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.mode-tab');
@@ -1052,13 +1059,7 @@
 
   loadFxRate();
   setInterval(loadFxRate, FX_REFRESH_MS);
-  loadMeta().then(refreshAll).then(() => {
-    requestAnimationFrame(() => {
-      document.body.style.display = 'none';
-      void document.body.offsetHeight;
-      document.body.style.display = '';
-    });
-  });
+  loadMeta().then(refreshAll);
   setInterval(refreshAll, REFRESH_MS);
 
   /* ---------- Chart modal ---------- */
