@@ -61,9 +61,14 @@
     gap: 12px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.15s ease;
   }
   .row:last-child {
     border-bottom: none;
+  }
+  .row:hover {
+    background: #1a1d22;
   }
   .rank {
     font-size: 12px;
@@ -111,6 +116,108 @@
     color: var(--ink-sub);
     text-align: center;
   }
+
+  .chart-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .chart-overlay.open {
+    display: flex;
+  }
+  .chart-modal {
+    width: 100%;
+    max-width: 480px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .chart-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .chart-symbol {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .chart-close {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 999px;
+    background: #1a1d22;
+    color: var(--ink-sub);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .chart-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .chart-price {
+    font-size: 24px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-change {
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .chart-change.up { color: var(--up); }
+  .chart-change.down { color: var(--down); }
+  .chart-canvas-wrap {
+    position: relative;
+    height: 180px;
+  }
+  #chartCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .chart-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-sub);
+    font-size: 13px;
+  }
+  .chart-ranges {
+    display: flex;
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .chart-range-btn {
+    flex: 1;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: #1a1d22;
+    color: var(--ink-sub);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .chart-range-btn.active {
+    background: var(--accent);
+    color: #04201d;
+  }
 </style>
 </head>
 <body>
@@ -124,6 +231,28 @@
       <div class="empty">불러오는 중...</div>
     </div>
     <div class="footer-note">바이낸스(Binance) 공개 API 기준 · USDT 마켓 · 5초마다 갱신</div>
+  </div>
+
+  <div class="chart-overlay" id="chartOverlay">
+    <div class="chart-modal">
+      <div class="chart-modal-header">
+        <div class="chart-symbol" id="chartSymbol">BTC</div>
+        <button type="button" class="chart-close" id="chartClose" aria-label="닫기">✕</button>
+      </div>
+      <div class="chart-price-row">
+        <div class="chart-price" id="chartPrice">$0</div>
+        <div class="chart-change" id="chartChange">+0.00%</div>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="chartCanvas"></canvas>
+        <div class="chart-loading" id="chartLoading">불러오는 중...</div>
+      </div>
+      <div class="chart-ranges" id="chartRanges">
+        <button type="button" class="chart-range-btn active" data-range="1D">1일</button>
+        <button type="button" class="chart-range-btn" data-range="1W">1주</button>
+        <button type="button" class="chart-range-btn" data-range="1M">1개월</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -159,7 +288,7 @@
         const sign = changeNum > 0 ? '+' : '';
         const coin = t.symbol.replace(/USDT$/, '');
         return `
-          <div class="row">
+          <div class="row" data-symbol="${t.symbol}">
             <div class="rank">${i + 1}</div>
             <div class="coin">
               <div class="coin-symbol">${coin}</div>
@@ -220,6 +349,135 @@
   refreshRanking();
   setInterval(refreshPrices, PRICE_REFRESH_MS);
   setInterval(refreshRanking, RANK_REFRESH_MS);
+
+  /* ---------- Chart modal ---------- */
+  const chartOverlay = document.getElementById('chartOverlay');
+  const chartClose = document.getElementById('chartClose');
+  const chartSymbolEl = document.getElementById('chartSymbol');
+  const chartPriceEl = document.getElementById('chartPrice');
+  const chartChangeEl = document.getElementById('chartChange');
+  const chartCanvas = document.getElementById('chartCanvas');
+  const chartLoadingEl = document.getElementById('chartLoading');
+  const chartRangesEl = document.getElementById('chartRanges');
+  const ctx = chartCanvas.getContext('2d');
+
+  const RANGES = {
+    '1D': { interval: '15m', limit: 96 },
+    '1W': { interval: '1h', limit: 168 },
+    '1M': { interval: '4h', limit: 180 },
+  };
+
+  let currentSymbol = null;
+  let currentRange = '1D';
+
+  function drawChart(closes) {
+    const wrap = chartCanvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    chartCanvas.width = w * dpr;
+    chartCanvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    if (closes.length < 2) return;
+
+    const min = Math.min(...closes);
+    const max = Math.max(...closes);
+    const range = max - min || 1;
+    const up = closes[closes.length - 1] >= closes[0];
+    const color = up ? '#2ecc71' : '#ff5c5c';
+    const padTop = 10;
+    const padBottom = 10;
+    const usableH = h - padTop - padBottom;
+
+    const points = closes.map((c, i) => {
+      const x = (i / (closes.length - 1)) * w;
+      const y = padTop + (1 - (c - min) / range) * usableH;
+      return [x, y];
+    });
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, color + '55');
+    gradient.addColorStop(1, color + '00');
+
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    points.forEach(([x, y]) => ctx.lineTo(x, y));
+    ctx.lineTo(points[points.length - 1][0], h);
+    ctx.lineTo(points[0][0], h);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    points.forEach(([x, y]) => ctx.lineTo(x, y));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  async function loadChart() {
+    if (!currentSymbol) return;
+    chartLoadingEl.style.display = 'flex';
+    const { interval, limit } = RANGES[currentRange];
+    try {
+      const klines = await fetchJson(
+        `https://api.binance.com/api/v3/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`,
+      );
+      const closes = klines.map((k) => Number(k[4]));
+      const first = closes[0];
+      const last = closes[closes.length - 1];
+      const changePct = ((last - first) / first) * 100;
+      const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
+      const sign = changePct > 0 ? '+' : '';
+      chartPriceEl.textContent = '$' + formatPrice(last);
+      chartChangeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
+      chartChangeEl.className = `chart-change ${cls}`;
+      drawChart(closes);
+    } catch (e) {
+      chartLoadingEl.textContent = '차트를 불러오지 못했습니다';
+      chartLoadingEl.style.display = 'flex';
+      return;
+    }
+    chartLoadingEl.style.display = 'none';
+  }
+
+  function openChart(symbol) {
+    currentSymbol = symbol;
+    currentRange = '1D';
+    chartRangesEl.querySelectorAll('.chart-range-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.range === currentRange);
+    });
+    chartSymbolEl.textContent = symbol.replace(/USDT$/, '');
+    chartOverlay.classList.add('open');
+    loadChart();
+  }
+
+  function closeChart() {
+    chartOverlay.classList.remove('open');
+    currentSymbol = null;
+  }
+
+  listEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.row');
+    if (row) openChart(row.dataset.symbol);
+  });
+  chartClose.addEventListener('click', closeChart);
+  chartOverlay.addEventListener('click', (e) => {
+    if (e.target === chartOverlay) closeChart();
+  });
+  chartRangesEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.chart-range-btn');
+    if (!btn) return;
+    currentRange = btn.dataset.range;
+    chartRangesEl.querySelectorAll('.chart-range-btn').forEach((b) => {
+      b.classList.toggle('active', b === btn);
+    });
+    loadChart();
+  });
 </script>
 
 </body>
