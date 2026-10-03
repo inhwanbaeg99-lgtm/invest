@@ -348,9 +348,9 @@
   </div>
 
 <script>
+  const FAPI = 'https://fapi.binance.com/fapi/v1';
   const TOP_N = 20;
-  const PRICE_REFRESH_MS = 5000;
-  const RANK_REFRESH_MS = 60000;
+  const REFRESH_MS = 5000;
   const FX_REFRESH_MS = 10 * 60 * 1000;
 
   const listEl = document.getElementById('list');
@@ -361,29 +361,24 @@
   const searchInputEl = document.getElementById('searchInput');
   const currencyToggleEl = document.getElementById('currencyToggle');
 
-  // 바이낸스에 상장된 토큰화 주식(미국 증시 휴장일/주말에도 거래 가능) 심볼
-  const US_STOCK_BASES = [
-    'AAPLB', 'TSLAB', 'NVDAB', 'MSFTB', 'METAB', 'GOOGLB', 'AMZNB', 'NFLXB', 'ORCLB', 'ADBEB',
-    'CRMB', 'IBMB', 'INTCB', 'QCOMB', 'AVGOB', 'AMDB', 'AMATB', 'ASMLB', 'TSMB', 'DELLB',
-    'PYPLB', 'GSB', 'BABAB', 'COINB', 'MSTRB', 'HOODB', 'PLTRB', 'CRWDB', 'SMCIB', 'NOKB',
-    'WDCB', 'STXB', 'ZMB', 'AMCB', 'GMEB', 'DJTB', 'RDDTB', 'PDDB', 'HIMSB', 'ARMB',
-    'MRVLB', 'GLWB', 'MRNAB',
-  ];
-  const LEVERAGE_BASES = ['SOXLB', 'SOXSB', 'TQQQB', 'SQQQB'];
-  const INDEX_COMMODITY_BASES = ['SPYB', 'QQQB', 'PAXG', 'XAUT'];
-
-  // 끝에 B를 떼고 보여줘야 하는(토큰화 주식) 심볼 집합. PAXG/XAUT는 원래 티커라 제외.
-  const STRIP_B_SET = new Set([...US_STOCK_BASES, ...LEVERAGE_BASES, 'SPYB', 'QQQB']);
+  // 레버리지/인버스 ETF와 지수 추종 ETF는 바이낸스 선물 API에서 EQUITY로 묶여 있어서 직접 분리
+  const LEVERAGE_TICKERS = new Set(['SOXL', 'SOXS', 'TQQQ', 'SQQQ', 'TZA', 'TBT', 'UVXY', 'NVDL', 'TSLL']);
+  const INDEX_ETF_TICKERS = new Set(['SPY', 'QQQ', 'IWM', 'SMH', 'XBI', 'XLE', 'EWJ', 'EWT', 'EWY', 'EWZ', 'GDX']);
+  const GOLD_COIN_TICKERS = new Set(['PAXG', 'XAUT']); // COIN 분류지만 실제로는 금
 
   const MODES = {
-    domestic: { label: '국내주식', kind: 'placeholder' },
-    us: { label: '미국주식', kind: 'fixed', bases: US_STOCK_BASES },
-    leverage: { label: '레버리지', kind: 'fixed', bases: LEVERAGE_BASES },
-    crypto: { label: '가상화폐', kind: 'scan' },
-    index: { label: '지수·원자재', kind: 'fixed', bases: INDEX_COMMODITY_BASES },
+    domestic: { label: '국내주식' },
+    us: { label: '미국주식' },
+    leverage: { label: '레버리지' },
+    crypto: { label: '가상화폐' },
+    index: { label: '지수·원자재' },
   };
 
   const KR_NAMES = {
+    domestic: {
+      SAMSUNG: '삼성전자', SKHYNIX: 'SK하이닉스', HYUNDAI: '현대차', SAMSUNGEM: '삼성전기',
+      HANMI: '한미반도체', LGELECTRONICS: 'LG전자', NAVER: '네이버', KODEX200: '코스피200 ETF',
+    },
     crypto: {
       BTC: '비트코인', ETH: '이더리움', SOL: '솔라나', XRP: '리플', ZEC: '지캐시',
       NEAR: '니어프로토콜', SUI: '수이', WLD: '월드코인', SAND: '샌드박스', BNB: '바이낸스코인',
@@ -412,25 +407,38 @@
       AMD: 'AMD', AMAT: '어플라이드머티리얼즈', ASML: 'ASML', TSM: 'TSMC', DELL: '델',
       PYPL: '페이팔', GS: '골드만삭스', BABA: '알리바바', COIN: '코인베이스', MSTR: '마이크로스트래티지',
       HOOD: '로빈후드', PLTR: '팔란티어', CRWD: '크라우드스트라이크', SMCI: '슈퍼마이크로', NOK: '노키아',
-      WDC: '웨스턴디지털', STX: '시게이트', ZM: '줌', AMC: 'AMC', GME: '게임스탑',
-      DJT: '트럼프미디어', RDDT: '레딧', PDD: '핀둬둬', HIMS: '힘스앤허스', ARM: 'ARM홀딩스',
-      MRVL: '마벨', GLW: '코닝', MRNA: '모더나',
+      WDC: '웨스턴디지털', ZM: '줌', AMC: 'AMC', GME: '게임스탑', DJT: '트럼프미디어',
+      RDDT: '레딧', PDD: '핀둬둬', HIMS: '힘스앤허스', ARM: 'ARM홀딩스', MRVL: '마벨',
+      GLW: '코닝', MRNA: '모더나', UBER: '우버', DIS: '디즈니', CSCO: '시스코',
+      HD: '홈디포', WMT: '월마트', JPM: 'JP모건', V: '비자', LLY: '일라이릴리',
+      KO: '코카콜라', NKE: '나이키', COST: '코스트코', UNH: '유나이티드헬스', CAT: '캐터필러',
+      SOFI: '소파이', SHOP: '쇼피파이', SNOW: '스노우플레이크', NET: '클라우드플레어', DDOG: '데이터독',
+      PANW: '팔로알토네트웍스', SNDK: '샌디스크', MU: '마이크론', KLAC: 'KLA', LRCX: '램리서치',
+      CVNA: '카바나', RIVN: '리비안', RKLB: '로켓랩', IONQ: '아이온큐', SONY: '소니',
     },
     leverage: {
       SOXL: '반도체 3배 레버리지 ETF', SOXS: '반도체 3배 인버스 ETF',
       TQQQ: '나스닥100 3배 레버리지 ETF', SQQQ: '나스닥100 3배 인버스 ETF',
+      TZA: '러셀2000 3배 인버스 ETF', TBT: '20년 국채 2배 인버스 ETF',
+      UVXY: 'VIX 변동성 1.5배 ETF', NVDL: '엔비디아 2배 레버리지 ETF', TSLL: '테슬라 2배 레버리지 ETF',
     },
     index: {
-      SPY: 'S&P500 지수 ETF', QQQ: '나스닥100 지수 ETF', PAXG: '팍스골드(금)', XAUT: '테더골드(금)',
+      SPY: 'S&P500 지수 ETF', QQQ: '나스닥100 지수 ETF', IWM: '러셀2000 지수 ETF',
+      SMH: '반도체 섹터 ETF', XBI: '바이오테크 섹터 ETF', XLE: '에너지 섹터 ETF',
+      EWJ: '일본 지수 ETF', EWT: '대만 지수 ETF', EWY: '한국 지수 ETF', EWZ: '브라질 지수 ETF',
+      GDX: '금광업 ETF', XAU: '금', XAG: '은', XPT: '백금', XPD: '팔라듐',
+      COPPER: '구리', CL: '원유(WTI)', BZ: '원유(브렌트)', NATGAS: '천연가스',
+      PAXG: '팍스골드(금)', XAUT: '테더골드(금)',
     },
   };
 
   let mode = 'crypto';
   let currency = 'USD';
   let krwRate = null;
-  let topSymbols = [];
+  let fullTickers = [];
   let rawTickers = [];
   let searchQuery = '';
+  let symbolMeta = {};
 
   function formatPrice(p) {
     const n = Number(p);
@@ -451,12 +459,32 @@
   }
 
   function displayName(symbol) {
-    const base = symbol.replace(/USDT$/, '');
-    return STRIP_B_SET.has(base) ? base.replace(/B$/, '') : base;
+    return symbol.replace(/USDT$/, '');
   }
 
   function krName(name) {
     return (KR_NAMES[mode] || {})[name];
+  }
+
+  function categoryFilter(t) {
+    if (!t.symbol.endsWith('USDT')) return false;
+    const meta = symbolMeta[t.symbol];
+    if (!meta || meta.status !== 'TRADING') return false;
+    const base = meta.base;
+    switch (mode) {
+      case 'domestic':
+        return meta.type === 'KR_EQUITY';
+      case 'us':
+        return meta.type === 'EQUITY' && !LEVERAGE_TICKERS.has(base) && !INDEX_ETF_TICKERS.has(base);
+      case 'leverage':
+        return LEVERAGE_TICKERS.has(base);
+      case 'index':
+        return meta.type === 'COMMODITY' || INDEX_ETF_TICKERS.has(base) || GOLD_COIN_TICKERS.has(base);
+      case 'crypto':
+        return meta.type === 'COIN' && meta.contractType === 'PERPETUAL' && !GOLD_COIN_TICKERS.has(base);
+      default:
+        return false;
+    }
   }
 
   function applySearch(tickers) {
@@ -497,6 +525,9 @@
   }
 
   function renderCurrent() {
+    const filtered = fullTickers.filter(categoryFilter);
+    filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
+    rawTickers = mode === 'us' || mode === 'crypto' ? filtered.slice(0, TOP_N) : filtered;
     render(applySearch(rawTickers));
   }
 
@@ -515,57 +546,22 @@
     }
   }
 
-  async function refreshRanking() {
-    const cfg = MODES[mode];
-    if (cfg.kind === 'placeholder') {
-      topSymbols = [];
-      rawTickers = [];
-      listEl.innerHTML = '<div class="empty">준비 중입니다</div>';
-      touchUpdatedAt();
-      return;
-    }
-    try {
-      let top;
-      if (cfg.kind === 'scan') {
-        const excluded = new Set(
-          [...US_STOCK_BASES, ...LEVERAGE_BASES, ...INDEX_COMMODITY_BASES].map((b) => b + 'USDT'),
-        );
-        const all = await fetchJson('https://api.binance.com/api/v3/ticker/24hr');
-        const usdt = all.filter(
-          (t) => t.symbol.endsWith('USDT') && !t.symbol.startsWith('USD') && !excluded.has(t.symbol),
-        );
-        usdt.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
-        top = usdt.slice(0, TOP_N);
-      } else {
-        const symbols = cfg.bases.map((b) => b + 'USDT');
-        const symbolsParam = encodeURIComponent(JSON.stringify(symbols));
-        const tickers = await fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsParam}`);
-        tickers.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
-        top = tickers;
-      }
-      topSymbols = top.map((t) => t.symbol);
-      rawTickers = top;
-      renderCurrent();
-      touchUpdatedAt();
-    } catch (e) {
-      if (!topSymbols.length) {
-        listEl.innerHTML = '<div class="empty">시세를 불러오지 못했습니다</div>';
-      }
-    }
+  async function loadMeta() {
+    const data = await fetchJson(`${FAPI}/exchangeInfo`);
+    data.symbols.forEach((s) => {
+      symbolMeta[s.symbol] = { type: s.underlyingType, base: s.baseAsset, contractType: s.contractType, status: s.status };
+    });
   }
 
-  async function refreshPrices() {
-    if (!topSymbols.length) return;
+  async function refreshAll() {
     try {
-      const symbolsParam = encodeURIComponent(JSON.stringify(topSymbols));
-      const tickers = await fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsParam}`);
-      const order = new Map(topSymbols.map((s, i) => [s, i]));
-      tickers.sort((a, b) => order.get(a.symbol) - order.get(b.symbol));
-      rawTickers = tickers;
+      fullTickers = await fetchJson(`${FAPI}/ticker/24hr`);
       renderCurrent();
       touchUpdatedAt();
     } catch (e) {
-      // keep showing last known prices on transient failure
+      if (!rawTickers.length) {
+        listEl.innerHTML = '<div class="empty">시세를 불러오지 못했습니다</div>';
+      }
     }
   }
 
@@ -578,25 +574,22 @@
   }
 
   const FOOTER_NOTES = {
-    domestic: '국내 주식은 준비 중입니다',
-    us: '바이낸스 토큰화 주식 기준 · 미국 증시 휴장일에도 거래 가능 · 5초마다 갱신',
-    leverage: '바이낸스 토큰화 레버리지 ETF 기준 · 5초마다 갱신',
-    crypto: '바이낸스(Binance) 공개 API 기준 · USDT 마켓 · 5초마다 갱신',
-    index: '지수 ETF 및 금 토큰(PAXG·XAUT) 기준 · 5초마다 갱신',
+    domestic: '바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신',
+    us: '바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신',
+    leverage: '바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신',
+    crypto: '바이낸스 선물(USDT 무기한 계약) 공개 API 기준 · 5초마다 갱신',
+    index: '지수 ETF·원자재·금 토큰 기준 · 5초마다 갱신',
   };
 
   function setMode(next) {
     if (mode === next) return;
     mode = next;
-    topSymbols = [];
-    rawTickers = [];
     modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
       b.classList.toggle('active', b.dataset.mode === mode);
     });
     modeTitleEl.textContent = MODES[mode].label;
     footerNoteEl.textContent = FOOTER_NOTES[mode];
-    listEl.innerHTML = '<div class="empty">불러오는 중...</div>';
-    refreshRanking();
+    renderCurrent();
   }
 
   modeTabsEl.addEventListener('click', (e) => {
@@ -622,9 +615,8 @@
 
   loadFxRate();
   setInterval(loadFxRate, FX_REFRESH_MS);
-  refreshRanking();
-  setInterval(refreshPrices, PRICE_REFRESH_MS);
-  setInterval(refreshRanking, RANK_REFRESH_MS);
+  loadMeta().then(refreshAll);
+  setInterval(refreshAll, REFRESH_MS);
 
   /* ---------- Chart modal ---------- */
   const chartOverlay = document.getElementById('chartOverlay');
@@ -701,7 +693,7 @@
     const { interval, limit } = RANGES[currentRange];
     try {
       const klines = await fetchJson(
-        `https://api.binance.com/api/v3/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`,
+        `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`,
       );
       const closes = klines.map((k) => Number(k[4]));
       const first = closes[0];
