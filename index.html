@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>실시간 시세</title>
+<title>Tickr</title>
 <style>
   :root {
     --bg: #0a0b0d;
@@ -27,7 +27,17 @@
   .wrap {
     max-width: 720px;
     margin: 0 auto;
-    padding: 28px 16px 60px;
+    padding: 52px 16px 60px;
+  }
+  .brand {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 50;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--accent);
   }
   .header {
     display: flex;
@@ -299,6 +309,8 @@
 </style>
 </head>
 <body>
+
+  <div class="brand">Tickr</div>
 
   <div class="wrap">
     <div class="header">
