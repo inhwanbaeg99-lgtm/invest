@@ -111,6 +111,11 @@
     padding-top: calc(18px + env(safe-area-inset-top));
     padding-bottom: 16px;
     margin-bottom: -16px;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
   }
   .header {
     display: flex;
@@ -1274,6 +1279,30 @@
     });
     loadChart();
   });
+
+  let chartSwipeX = 0;
+  let chartSwipeY = 0;
+  let chartSwipeTracking = false;
+
+  chartOverlay.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.chart-canvas-wrap')) {
+      chartSwipeTracking = false;
+      return;
+    }
+    chartSwipeTracking = true;
+    chartSwipeX = e.touches[0].clientX;
+    chartSwipeY = e.touches[0].clientY;
+  }, { passive: true });
+
+  chartOverlay.addEventListener('touchend', (e) => {
+    if (!chartSwipeTracking) return;
+    chartSwipeTracking = false;
+    const dx = e.changedTouches[0].clientX - chartSwipeX;
+    const dy = e.changedTouches[0].clientY - chartSwipeY;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) {
+      closeChart();
+    }
+  }, { passive: true });
 
   if ('serviceWorker' in navigator) {
     let refreshing = false;
