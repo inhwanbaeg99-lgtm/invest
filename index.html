@@ -362,9 +362,11 @@
   const currencyToggleEl = document.getElementById('currencyToggle');
 
   // 레버리지/인버스 ETF와 지수 추종 ETF는 바이낸스 선물 API에서 EQUITY로 묶여 있어서 직접 분리
-  const LEVERAGE_TICKERS = new Set(['SOXL', 'SOXS', 'TQQQ', 'SQQQ', 'TZA', 'TBT', 'UVXY', 'NVDL', 'TSLL']);
-  const INDEX_ETF_TICKERS = new Set(['SPY', 'QQQ', 'IWM', 'SMH', 'XBI', 'XLE', 'EWJ', 'EWT', 'EWY', 'EWZ', 'GDX']);
-  const GOLD_COIN_TICKERS = new Set(['PAXG', 'XAUT']); // COIN 분류지만 실제로는 금
+  const LEVERAGE_TICKERS = new Set(['SOXL', 'SOXS', 'TQQQ', 'SQQQ', 'KORU', 'RAM', 'RAMZ', 'UVXY']);
+  const INDEX_COMMODITY_TICKERS = new Set([
+    'XAU', 'CL', 'XAG', 'BZ', 'QQQ', 'EWY', 'SPY', 'NATGAS', 'COPPER',
+    'XPD', 'SMH', 'IWM', 'EWZ', 'EWJ', 'GDX', 'EWT', 'XLE', 'XBI',
+  ]);
 
   const MODES = {
     domestic: { label: '국내주식' },
@@ -419,16 +421,15 @@
     leverage: {
       SOXL: '반도체 3배 레버리지 ETF', SOXS: '반도체 3배 인버스 ETF',
       TQQQ: '나스닥100 3배 레버리지 ETF', SQQQ: '나스닥100 3배 인버스 ETF',
-      TZA: '러셀2000 3배 인버스 ETF', TBT: '20년 국채 2배 인버스 ETF',
-      UVXY: 'VIX 변동성 1.5배 ETF', NVDL: '엔비디아 2배 레버리지 ETF', TSLL: '테슬라 2배 레버리지 ETF',
+      KORU: '한국 3배 레버리지 ETF', RAM: '램(레버리지)', RAMZ: '램Z(레버리지)',
+      UVXY: 'VIX 변동성 1.5배 ETF',
     },
     index: {
       SPY: 'S&P500 지수 ETF', QQQ: '나스닥100 지수 ETF', IWM: '러셀2000 지수 ETF',
       SMH: '반도체 섹터 ETF', XBI: '바이오테크 섹터 ETF', XLE: '에너지 섹터 ETF',
       EWJ: '일본 지수 ETF', EWT: '대만 지수 ETF', EWY: '한국 지수 ETF', EWZ: '브라질 지수 ETF',
-      GDX: '금광업 ETF', XAU: '금', XAG: '은', XPT: '백금', XPD: '팔라듐',
+      GDX: '금광업 ETF', XAU: '금', XAG: '은', XPD: '팔라듐',
       COPPER: '구리', CL: '원유(WTI)', BZ: '원유(브렌트)', NATGAS: '천연가스',
-      PAXG: '팍스골드(금)', XAUT: '테더골드(금)',
     },
   };
 
@@ -443,7 +444,7 @@
   function formatPrice(p) {
     const n = Number(p);
     if (currency === 'KRW' && krwRate) {
-      return '₩' + Math.round(n * krwRate).toLocaleString('ko-KR');
+      return Math.round(n * krwRate).toLocaleString('ko-KR') + '원';
     }
     if (n >= 100) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
     if (n >= 1) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 4 });
@@ -475,13 +476,13 @@
       case 'domestic':
         return meta.type === 'KR_EQUITY';
       case 'us':
-        return meta.type === 'EQUITY' && !LEVERAGE_TICKERS.has(base) && !INDEX_ETF_TICKERS.has(base);
+        return meta.type === 'EQUITY' && !LEVERAGE_TICKERS.has(base) && !INDEX_COMMODITY_TICKERS.has(base);
       case 'leverage':
         return LEVERAGE_TICKERS.has(base);
       case 'index':
-        return meta.type === 'COMMODITY' || INDEX_ETF_TICKERS.has(base) || GOLD_COIN_TICKERS.has(base);
+        return INDEX_COMMODITY_TICKERS.has(base);
       case 'crypto':
-        return meta.type === 'COIN' && meta.contractType === 'PERPETUAL' && !GOLD_COIN_TICKERS.has(base);
+        return meta.type === 'COIN' && meta.contractType === 'PERPETUAL';
       default:
         return false;
     }
