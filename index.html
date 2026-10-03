@@ -33,7 +33,7 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
   }
   .title {
     font-size: 20px;
@@ -47,6 +47,29 @@
     font-size: 12px;
     color: var(--ink-sub);
     font-variant-numeric: tabular-nums;
+  }
+  .mode-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .mode-tab {
+    flex: 1;
+    height: 38px;
+    border: none;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--ink-sub);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mode-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #04201d;
   }
   .list {
     background: var(--panel);
@@ -227,10 +250,14 @@
       <div class="title">거래량 상위 <span>TOP 20</span></div>
       <div class="updated" id="updatedAt">불러오는 중...</div>
     </div>
+    <div class="mode-tabs" id="modeTabs">
+      <button type="button" class="mode-tab active" data-mode="coin">코인</button>
+      <button type="button" class="mode-tab" data-mode="stock">주식</button>
+    </div>
     <div class="list" id="list">
       <div class="empty">불러오는 중...</div>
     </div>
-    <div class="footer-note">바이낸스(Binance) 공개 API 기준 · USDT 마켓 · 5초마다 갱신</div>
+    <div class="footer-note" id="footerNote">바이낸스(Binance) 공개 API 기준 · USDT 마켓 · 5초마다 갱신</div>
   </div>
 
   <div class="chart-overlay" id="chartOverlay">
@@ -262,7 +289,21 @@
 
   const listEl = document.getElementById('list');
   const updatedAtEl = document.getElementById('updatedAt');
+  const footerNoteEl = document.getElementById('footerNote');
+  const modeTabsEl = document.getElementById('modeTabs');
 
+  // 바이낸스에 상장된 토큰화 주식(미국 증시 휴장일/주말에도 거래 가능) 심볼
+  const STOCK_BASES = [
+    'AAPLB', 'TSLAB', 'NVDAB', 'MSFTB', 'METAB', 'GOOGLB', 'AMZNB', 'NFLXB', 'ORCLB', 'ADBEB',
+    'CRMB', 'IBMB', 'INTCB', 'QCOMB', 'AVGOB', 'AMDB', 'AMATB', 'ASMLB', 'TSMB', 'DELLB',
+    'PYPLB', 'GSB', 'BABAB', 'COINB', 'MSTRB', 'HOODB', 'PLTRB', 'CRWDB', 'SMCIB', 'NOKB',
+    'WDCB', 'STXB', 'ZMB', 'AMCB', 'GMEB', 'DJTB', 'RDDTB', 'PDDB', 'HIMSB', 'ARMB',
+    'MRVLB', 'GLWB', 'MRNAB', 'SPYB', 'QQQB',
+  ];
+  const STOCK_SYMBOLS = STOCK_BASES.map((b) => b + 'USDT');
+  const STOCK_BASE_SET = new Set(STOCK_BASES);
+
+  let mode = 'coin';
   let topSymbols = [];
 
   function formatPrice(p) {
@@ -280,18 +321,22 @@
     return n.toFixed(0);
   }
 
+  function displayName(symbol) {
+    const base = symbol.replace(/USDT$/, '');
+    return mode === 'stock' ? base.replace(/B$/, '') : base;
+  }
+
   function render(tickers) {
     listEl.innerHTML = tickers
       .map((t, i) => {
         const changeNum = Number(t.priceChangePercent);
         const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
         const sign = changeNum > 0 ? '+' : '';
-        const coin = t.symbol.replace(/USDT$/, '');
         return `
           <div class="row" data-symbol="${t.symbol}">
             <div class="rank">${i + 1}</div>
             <div class="coin">
-              <div class="coin-symbol">${coin}</div>
+              <div class="coin-symbol">${displayName(t.symbol)}</div>
               <div class="coin-vol">거래대금 ${formatVolume(t.quoteVolume)}</div>
             </div>
             <div class="price">$${formatPrice(t.lastPrice)}</div>
@@ -310,10 +355,23 @@
 
   async function refreshRanking() {
     try {
-      const all = await fetchJson('https://api.binance.com/api/v3/ticker/24hr');
-      const usdt = all.filter((t) => t.symbol.endsWith('USDT') && !t.symbol.startsWith('USD'));
-      usdt.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
-      const top = usdt.slice(0, TOP_N);
+      let top;
+      if (mode === 'stock') {
+        const symbolsParam = encodeURIComponent(JSON.stringify(STOCK_SYMBOLS));
+        const tickers = await fetchJson(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsParam}`);
+        tickers.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
+        top = tickers.slice(0, TOP_N);
+      } else {
+        const all = await fetchJson('https://api.binance.com/api/v3/ticker/24hr');
+        const usdt = all.filter(
+          (t) =>
+            t.symbol.endsWith('USDT') &&
+            !t.symbol.startsWith('USD') &&
+            !STOCK_BASE_SET.has(t.symbol.replace(/USDT$/, '')),
+        );
+        usdt.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
+        top = usdt.slice(0, TOP_N);
+      }
       topSymbols = top.map((t) => t.symbol);
       render(top);
       touchUpdatedAt();
@@ -345,6 +403,26 @@
     const ss = String(now.getSeconds()).padStart(2, '0');
     updatedAtEl.textContent = `${hh}:${mm}:${ss} 기준`;
   }
+
+  function setMode(next) {
+    if (mode === next) return;
+    mode = next;
+    topSymbols = [];
+    modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    footerNoteEl.textContent =
+      mode === 'stock'
+        ? '바이낸스 토큰화 주식 기준 · 미국 증시 휴장일에도 거래 가능 · 5초마다 갱신'
+        : '바이낸스(Binance) 공개 API 기준 · USDT 마켓 · 5초마다 갱신';
+    listEl.innerHTML = '<div class="empty">불러오는 중...</div>';
+    refreshRanking();
+  }
+
+  modeTabsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.mode-tab');
+    if (btn) setMode(btn.dataset.mode);
+  });
 
   refreshRanking();
   setInterval(refreshPrices, PRICE_REFRESH_MS);
@@ -451,7 +529,7 @@
     chartRangesEl.querySelectorAll('.chart-range-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.range === currentRange);
     });
-    chartSymbolEl.textContent = symbol.replace(/USDT$/, '');
+    chartSymbolEl.textContent = displayName(symbol);
     chartOverlay.classList.add('open');
     loadChart();
   }
