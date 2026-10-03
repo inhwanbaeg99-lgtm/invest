@@ -37,7 +37,7 @@
   .wrap {
     max-width: 720px;
     margin: 0 auto;
-    padding: 28px 16px 110px;
+    padding: 0 16px 110px;
   }
   .group-label {
     font-size: 12px;
@@ -108,7 +108,6 @@
     background: linear-gradient(to bottom, var(--bg) 55%, transparent 100%);
     padding-top: calc(28px + env(safe-area-inset-top));
     padding-bottom: 16px;
-    margin-top: calc(-28px - env(safe-area-inset-top));
     margin-bottom: -16px;
   }
   .header {
@@ -167,16 +166,40 @@
     justify-content: center;
     cursor: pointer;
   }
+  .mode-tabs-wrap {
+    position: relative;
+    margin-bottom: 12px;
+  }
   .mode-tabs {
     display: flex;
     gap: 6px;
-    margin-bottom: 12px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
   .mode-tabs::-webkit-scrollbar {
     display: none;
+  }
+  .tabs-fade {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 1;
+  }
+  .tabs-fade.show {
+    opacity: 1;
+  }
+  .tabs-fade-left {
+    left: 0;
+    background: linear-gradient(to right, var(--bg), transparent);
+  }
+  .tabs-fade-right {
+    right: 0;
+    background: linear-gradient(to left, var(--bg), transparent);
   }
   .mode-tab {
     flex: 0 0 auto;
@@ -381,7 +404,16 @@
   .chart-modal-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
+    margin-bottom: 16px;
+    flex: 0 0 auto;
+  }
+  .chart-modal-header .title {
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .chart-symbol-row {
     margin-bottom: 20px;
     flex: 0 0 auto;
   }
@@ -518,12 +550,16 @@
           </svg>
         </button>
       </div>
-      <div class="mode-tabs" id="modeTabs">
-        <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
-        <button type="button" class="mode-tab" data-mode="us">미국주식</button>
-        <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
-        <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
-        <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
+      <div class="mode-tabs-wrap">
+        <div class="mode-tabs" id="modeTabs">
+          <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
+          <button type="button" class="mode-tab" data-mode="us">미국주식</button>
+          <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
+          <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
+          <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
+        </div>
+        <div class="tabs-fade tabs-fade-left" id="tabsFadeLeft"></div>
+        <div class="tabs-fade tabs-fade-right" id="tabsFadeRight"></div>
       </div>
     </div>
     <div class="list" id="list">
@@ -535,15 +571,22 @@
   <div class="chart-overlay" id="chartOverlay">
     <div class="chart-inner">
       <div class="chart-modal-header">
+        <div class="title-group">
+          <div class="title">Tickr</div>
+          <div class="currency-toggle" id="chartCurrencyToggle">
+            <button type="button" class="currency-btn" data-currency="USD">$</button>
+            <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
+          </div>
+        </div>
         <button type="button" class="chart-close" id="chartClose" aria-label="뒤로">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <div>
-          <div class="chart-symbol" id="chartSymbol">BTC</div>
-          <div class="chart-symbol-kr" id="chartSymbolKr"></div>
-        </div>
+      </div>
+      <div class="chart-symbol-row">
+        <div class="chart-symbol" id="chartSymbol">BTC</div>
+        <div class="chart-symbol-kr" id="chartSymbolKr"></div>
       </div>
       <div class="chart-price-row">
         <div class="chart-price" id="chartPrice">$0</div>
@@ -571,7 +614,13 @@
   <div class="search-page" id="searchPage">
     <div class="search-page-inner">
       <div class="search-page-header">
-        <div class="title">Tickr</div>
+        <div class="title-group">
+          <div class="title">Tickr</div>
+          <div class="currency-toggle" id="searchCurrencyToggle">
+            <button type="button" class="currency-btn" data-currency="USD">$</button>
+            <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
+          </div>
+        </div>
         <button type="button" class="chart-close" id="searchPageClose" aria-label="닫기">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -628,13 +677,15 @@
   const listEl = document.getElementById('list');
   const updatedAtEl = document.getElementById('updatedAt');
   const modeTabsEl = document.getElementById('modeTabs');
+  const tabsFadeLeftEl = document.getElementById('tabsFadeLeft');
+  const tabsFadeRightEl = document.getElementById('tabsFadeRight');
   const searchIconBtn = document.getElementById('searchIconBtn');
   const searchPageEl = document.getElementById('searchPage');
   const searchPageClose = document.getElementById('searchPageClose');
   const searchInputEl = document.getElementById('searchInput');
   const searchClearBtn = document.getElementById('searchClearBtn');
   const searchPageListEl = document.getElementById('searchPageList');
-  const currencyToggleEl = document.getElementById('currencyToggle');
+  const currencyToggleEls = document.querySelectorAll('.currency-toggle');
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
   const navHighlightEl = document.getElementById('navHighlight');
@@ -945,6 +996,15 @@
     if (btn) setMode(btn.dataset.mode);
   });
 
+  function updateTabsFade() {
+    const { scrollLeft, scrollWidth, clientWidth } = modeTabsEl;
+    tabsFadeLeftEl.classList.toggle('show', scrollLeft > 4);
+    tabsFadeRightEl.classList.toggle('show', scrollLeft < scrollWidth - clientWidth - 4);
+  }
+  modeTabsEl.addEventListener('scroll', updateTabsFade);
+  window.addEventListener('resize', updateTabsFade);
+  updateTabsFade();
+
   navHomeBtn.addEventListener('click', () => setView('home'));
   navAllBtn.addEventListener('click', () => setView('all'));
 
@@ -966,15 +1026,23 @@
     if (e.target === searchPageEl) closeSearch();
   });
 
-  currencyToggleEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('.currency-btn');
-    if (!btn || btn.dataset.currency === currency) return;
-    currency = btn.dataset.currency;
-    currencyToggleEl.querySelectorAll('.currency-btn').forEach((b) => {
-      b.classList.toggle('active', b === btn);
+  function setCurrency(cur) {
+    if (cur === currency) return;
+    currency = cur;
+    currencyToggleEls.forEach((group) => {
+      group.querySelectorAll('.currency-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.currency === cur);
+      });
     });
     renderCurrent();
     if (currentSymbol) loadChart();
+  }
+
+  currencyToggleEls.forEach((group) => {
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('.currency-btn');
+      if (btn) setCurrency(btn.dataset.currency);
+    });
   });
 
   loadFxRate();
