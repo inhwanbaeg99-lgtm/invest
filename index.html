@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <link rel="preconnect" href="https://fapi.binance.com" crossorigin />
 <link rel="dns-prefetch" href="https://fapi.binance.com" />
 <link rel="manifest" href="manifest.json" />
@@ -35,6 +35,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     padding-bottom: env(safe-area-inset-bottom);
+    touch-action: manipulation;
   }
   .wrap {
     max-width: 720px;
@@ -1063,6 +1064,7 @@
   setInterval(refreshAll, REFRESH_MS);
 
   /* ---------- Chart modal ---------- */
+  const wrapEl = document.querySelector('.wrap');
   const chartOverlay = document.getElementById('chartOverlay');
   const chartClose = document.getElementById('chartClose');
   const chartSymbolEl = document.getElementById('chartSymbol');
@@ -1293,6 +1295,11 @@
   let chartSwipeTracking = false;
   let chartSwipeDragging = false;
 
+  function resetWrapTransform() {
+    wrapEl.style.transition = 'none';
+    wrapEl.style.transform = '';
+  }
+
   chartOverlay.addEventListener('touchstart', (e) => {
     if (e.target.closest('.chart-canvas-wrap')) {
       chartSwipeTracking = false;
@@ -1317,9 +1324,14 @@
         return;
       }
       chartSwipeDragging = true;
+      wrapEl.style.transition = 'none';
     }
+    e.preventDefault();
     chartOverlay.style.transform = `translateX(${dx}px)`;
-  }, { passive: true });
+    const progress = Math.min(Math.abs(dx) / window.innerWidth, 1);
+    const dir = dx > 0 ? 1 : -1;
+    wrapEl.style.transform = `translateX(${-dir * (1 - progress) * 30}%)`;
+  }, { passive: false });
 
   chartOverlay.addEventListener('touchend', (e) => {
     if (!chartSwipeTracking) return;
@@ -1329,16 +1341,21 @@
     const elapsed = Date.now() - chartSwipeStart;
     const velocity = Math.abs(dx) / Math.max(elapsed, 1);
     chartOverlay.style.transition = 'transform 0.25s ease';
+    wrapEl.style.transition = 'transform 0.25s ease';
     if (chartSwipeDragging && Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > 90 || velocity > 0.5)) {
       const dir = dx > 0 ? 1 : -1;
       chartOverlay.style.transform = `translateX(${dir * 100}%)`;
+      wrapEl.style.transform = 'translateX(0)';
       setTimeout(() => {
         closeChart();
         chartOverlay.style.transition = 'none';
         chartOverlay.style.transform = '';
+        resetWrapTransform();
       }, 250);
     } else {
       chartOverlay.style.transform = 'translateX(0)';
+      wrapEl.style.transform = 'translateX(0)';
+      if (chartSwipeDragging) setTimeout(resetWrapTransform, 250);
     }
     chartSwipeDragging = false;
   }, { passive: true });
