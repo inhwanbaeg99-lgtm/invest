@@ -1053,8 +1053,11 @@
   loadFxRate();
   setInterval(loadFxRate, FX_REFRESH_MS);
   loadMeta().then(refreshAll).then(() => {
-    window.scrollTo(0, 1);
-    requestAnimationFrame(() => window.scrollTo(0, 0));
+    requestAnimationFrame(() => {
+      document.body.style.display = 'none';
+      void document.body.offsetHeight;
+      document.body.style.display = '';
+    });
   });
   setInterval(refreshAll, REFRESH_MS);
 
