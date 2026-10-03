@@ -32,7 +32,6 @@
     color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
-    padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
   .wrap {
@@ -102,13 +101,14 @@
     cursor: default;
   }
   .top-header {
+    position: -webkit-sticky;
     position: sticky;
     top: 0;
     z-index: 10;
     background: linear-gradient(to bottom, var(--bg) 55%, transparent 100%);
-    padding-top: 28px;
+    padding-top: calc(28px + env(safe-area-inset-top));
     padding-bottom: 16px;
-    margin-top: -28px;
+    margin-top: calc(-28px - env(safe-area-inset-top));
     margin-bottom: -16px;
   }
   .header {
@@ -167,6 +167,11 @@
     justify-content: center;
     cursor: pointer;
   }
+  .search-icon-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #04201d;
+  }
   .mode-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -198,57 +203,24 @@
     border-color: var(--accent);
     color: #04201d;
   }
-  .search-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 110;
-    background: var(--bg);
-    display: none;
-    flex-direction: column;
-    padding: max(20px, env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
-  }
-  .search-overlay.open {
-    display: flex;
-  }
-  .search-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-    flex: 0 0 auto;
-  }
-  .search-modal-title {
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: -0.01em;
-  }
-  .search-modal-input {
+  .search-input-inline {
     width: 100%;
-    height: 48px;
-    padding: 0 16px;
+    height: 36px;
+    padding: 0 14px;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 10px;
     background: var(--panel);
     color: var(--ink);
     font-family: inherit;
     font-size: 16px;
     box-sizing: border-box;
-    margin-bottom: 16px;
-    flex: 0 0 auto;
   }
-  .search-modal-input::placeholder {
+  .search-input-inline::placeholder {
     color: var(--ink-sub);
   }
-  .search-modal-input:focus {
+  .search-input-inline:focus {
     outline: none;
     border-color: var(--accent);
-  }
-  .search-results {
-    flex: 1;
-    overflow-y: auto;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
   }
   .row.search-row-item {
     grid-template-columns: 1fr auto auto;
@@ -446,22 +418,12 @@
         <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
         <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
       </div>
+      <input type="text" class="search-input-inline" id="searchInput" placeholder="종목명 또는 티커 (SOXL, 엔비디아, 삼성전자...)" hidden />
     </div>
     <div class="list" id="list">
       <div class="empty">불러오는 중...</div>
     </div>
     <div class="footer-note" id="updatedAt">불러오는 중...</div>
-  </div>
-
-  <div class="search-overlay" id="searchOverlay">
-    <div class="search-modal-header">
-      <div class="search-modal-title">종목 검색</div>
-      <button type="button" class="chart-close" id="searchClose" aria-label="닫기">✕</button>
-    </div>
-    <input type="text" class="search-modal-input" id="searchInput" placeholder="종목명 또는 티커 (SOXL, 엔비디아, 삼성전자...)" />
-    <div class="search-results" id="searchResults">
-      <div class="empty">검색어를 입력하세요</div>
-    </div>
   </div>
 
   <div class="chart-overlay" id="chartOverlay">
@@ -523,9 +485,6 @@
   const modeTabsEl = document.getElementById('modeTabs');
   const searchInputEl = document.getElementById('searchInput');
   const searchIconBtn = document.getElementById('searchIconBtn');
-  const searchOverlayEl = document.getElementById('searchOverlay');
-  const searchCloseBtn = document.getElementById('searchClose');
-  const searchResultsEl = document.getElementById('searchResults');
   const currencyToggleEl = document.getElementById('currencyToggle');
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
@@ -726,7 +685,7 @@
   function performGlobalSearch(query) {
     const q = query.trim().toLowerCase();
     if (!q) {
-      searchResultsEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
+      listEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
       return;
     }
     const savedMode = mode;
@@ -741,7 +700,7 @@
     });
     mode = savedMode;
     matches.sort((a, b) => Number(b.t.quoteVolume) - Number(a.t.quoteVolume));
-    searchResultsEl.innerHTML = matches.length
+    listEl.innerHTML = matches.length
       ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
       : '<div class="empty">검색 결과가 없습니다</div>';
   }
@@ -788,22 +747,32 @@
     updatedAtEl.textContent = `${hh}:${mm}:${ss} 기준`;
   }
 
+  let searchOpen = false;
+
   function openSearch() {
-    searchOverlayEl.classList.add('open');
+    searchOpen = true;
+    searchIconBtn.classList.add('active');
+    modeTabsEl.style.display = 'none';
+    searchInputEl.hidden = false;
     searchInputEl.value = '';
-    searchResultsEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
     searchInputEl.focus();
+    listEl.innerHTML = '<div class="empty">검색어를 입력하세요</div>';
   }
 
   function closeSearch() {
-    searchOverlayEl.classList.remove('open');
+    if (!searchOpen) return;
+    searchOpen = false;
+    searchIconBtn.classList.remove('active');
+    modeTabsEl.style.display = '';
+    searchInputEl.hidden = true;
+    renderCurrent();
   }
 
   function applyViewVisibility() {
     const isHome = view === 'home';
-    modeTabsEl.style.display = isHome ? 'none' : '';
     searchIconBtn.style.display = isHome ? 'none' : '';
     if (isHome) closeSearch();
+    modeTabsEl.style.display = isHome ? 'none' : '';
   }
 
   function setMode(next) {
@@ -844,17 +813,13 @@
   searchInputEl.addEventListener('input', () => {
     performGlobalSearch(searchInputEl.value);
   });
-
-  searchIconBtn.addEventListener('click', openSearch);
-  searchCloseBtn.addEventListener('click', closeSearch);
-  searchOverlayEl.addEventListener('keydown', (e) => {
+  searchInputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSearch();
   });
-  searchResultsEl.addEventListener('click', (e) => {
-    const row = e.target.closest('.row');
-    if (!row) return;
-    closeSearch();
-    openChart(row.dataset.symbol);
+
+  searchIconBtn.addEventListener('click', () => {
+    if (searchOpen) closeSearch();
+    else openSearch();
   });
 
   currencyToggleEl.addEventListener('click', (e) => {
