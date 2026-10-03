@@ -305,24 +305,24 @@
       <div class="title" id="modeTitle">Tickr</div>
       <div class="header-right">
         <div class="currency-toggle" id="currencyToggle">
-          <button type="button" class="currency-btn active" data-currency="USD">$</button>
-          <button type="button" class="currency-btn" data-currency="KRW">₩</button>
+          <button type="button" class="currency-btn" data-currency="USD">$</button>
+          <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
         </div>
         <div class="updated" id="updatedAt">불러오는 중...</div>
       </div>
     </div>
     <div class="mode-tabs" id="modeTabs">
-      <button type="button" class="mode-tab" data-mode="domestic">국내주식</button>
+      <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
       <button type="button" class="mode-tab" data-mode="us">미국주식</button>
       <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
-      <button type="button" class="mode-tab active" data-mode="crypto">가상화폐</button>
+      <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
       <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
     </div>
     <input type="text" class="search-input" id="searchInput" placeholder="종목 검색 (티커 또는 한글 이름)" />
     <div class="list" id="list">
       <div class="empty">불러오는 중...</div>
     </div>
-    <div class="footer-note" id="footerNote">바이낸스(Binance) 공개 API 기준 · USDT 마켓 · 5초마다 갱신</div>
+    <div class="footer-note" id="footerNote">바이낸스 선물(TradFi Perpetual) 기준 · 5초마다 갱신</div>
   </div>
 
   <div class="chart-overlay" id="chartOverlay">
@@ -424,8 +424,8 @@
     },
   };
 
-  let mode = 'crypto';
-  let currency = 'USD';
+  let mode = 'domestic';
+  let currency = 'KRW';
   let krwRate = null;
   let fullTickers = [];
   let rawTickers = [];
