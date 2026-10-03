@@ -106,7 +106,7 @@
     top: 0;
     z-index: 10;
     background: linear-gradient(to bottom, var(--bg) 55%, transparent 100%);
-    padding-top: calc(28px + env(safe-area-inset-top));
+    padding-top: calc(18px + env(safe-area-inset-top));
     padding-bottom: 16px;
     margin-bottom: -16px;
   }
@@ -168,11 +168,12 @@
   }
   .mode-tabs-wrap {
     position: relative;
-    margin-bottom: 12px;
+    margin: 0 -16px 12px;
   }
   .mode-tabs {
     display: flex;
     gap: 6px;
+    padding: 0 16px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
