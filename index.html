@@ -540,16 +540,34 @@
     font-size: 11px;
     color: var(--ink-sub);
   }
-  .indicators-grid {
+  .indicators-table {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    margin-top: 6px;
   }
-  .indicator-card {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px;
+  .indicator-cell {
+    padding: 12px 12px;
+  }
+  .indicator-cell:nth-child(odd) {
+    border-right: 1px solid var(--line);
+  }
+  .indicator-cell:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+  .indicator-cell:first-child,
+  .indicator-cell:nth-child(2) {
+    padding-top: 0;
+  }
+  .indicator-cell:nth-child(odd) {
+    padding-left: 0;
+  }
+  .indicator-cell:nth-child(even) {
+    padding-right: 0;
+  }
+  .fng-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 6px;
   }
   .indicator-label {
     font-size: 12px;
@@ -570,6 +588,7 @@
   .indicator-change.down { color: var(--down); }
   .fng-card {
     text-align: center;
+    padding: 4px 8px;
   }
   .fng-gauge-svg {
     width: 100%;
@@ -1403,7 +1422,7 @@
       const cls = hasChange ? (changePct > 0 ? 'up' : changePct < 0 ? 'down' : '') : '';
       const sign = hasChange && changePct > 0 ? '+' : '';
       return `
-        <div class="indicator-card">
+        <div class="indicator-cell">
           <div class="indicator-label">${label}</div>
           <div class="indicator-value">${valueText}</div>
           ${hasChange ? `<div class="indicator-change ${cls}">${sign}${changePct.toFixed(2)}%</div>` : ''}
@@ -1412,15 +1431,13 @@
     }
 
     const indicatorsHtml = `
-      <div>
-        <div class="home-section-header">
-          <div class="home-section-title">지표</div>
-        </div>
-        <div class="indicators-grid">
-          ${indicatorCardHtml('원/달러', krwRate ? Math.round(krwRate).toLocaleString('ko-KR') + '원' : '-', null)}
+      <div class="home-card">
+        <div class="portfolio-label">지표</div>
+        <div class="indicators-table">
+          ${indicatorCardHtml('환율', krwRate ? Math.round(krwRate).toLocaleString('ko-KR') + '원' : '-', null)}
+          ${indicatorCardHtml('미국채 10년', us10yData ? us10yData.price.toFixed(2) + '%' : '-', us10yData ? us10yData.changePct : null)}
           ${indicatorCardHtml('WTI 유가', clTicker ? '$' + Number(clTicker.lastPrice).toFixed(2) : '-', clTicker ? clChangePct : null)}
           ${indicatorCardHtml('VIX 변동성', vixData ? vixData.price.toFixed(2) : '-', vixData ? vixData.changePct : null)}
-          ${indicatorCardHtml('미국채 10년', us10yData ? us10yData.price.toFixed(2) + '%' : '-', us10yData ? us10yData.changePct : null)}
         </div>
       </div>
     `;
@@ -1462,7 +1479,7 @@
     function fngCardHtml(label, fng) {
       const cls = fng ? (fng.label.includes('fear') ? 'down' : fng.label.includes('greed') ? 'up' : '') : '';
       return `
-        <div class="indicator-card fng-card">
+        <div class="fng-card">
           <div class="indicator-label">${label}</div>
           ${fng ? fngGaugeSvg(fng.value) : ''}
           <div class="fng-value">${fng ? fng.value : '-'}</div>
@@ -1472,11 +1489,9 @@
     }
 
     const fearGreedHtml = `
-      <div>
-        <div class="home-section-header">
-          <div class="home-section-title">공포·탐욕 지수</div>
-        </div>
-        <div class="indicators-grid">
+      <div class="home-card">
+        <div class="portfolio-label">공포·탐욕 지수</div>
+        <div class="fng-grid">
           ${fngCardHtml('주식', stockFearGreed)}
           ${fngCardHtml('코인', cryptoFearGreed)}
         </div>
