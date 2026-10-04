@@ -620,13 +620,9 @@
   .add-holding-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
     margin-bottom: 20px;
     flex: 0 0 auto;
-  }
-  .add-holding-title {
-    font-size: 20px;
-    font-weight: 800;
   }
   .add-holding-search-row {
     position: relative;
@@ -677,7 +673,7 @@
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 12px 16px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
   .add-holding-selected-name {
     font-size: 15px;
@@ -688,6 +684,8 @@
     color: var(--ink-sub);
   }
   .add-holding-change-btn {
+    text-align: center;
+    margin-bottom: 16px;
     font-size: 12.5px;
     font-weight: 700;
     color: var(--accent);
@@ -1001,13 +999,13 @@
   <div class="add-holding-page" id="addHoldingPage">
     <div class="add-holding-inner">
       <div class="add-holding-header">
+        <div class="title">Tickr</div>
         <button type="button" class="chart-close" id="addHoldingClose" aria-label="닫기">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="6" y1="6" x2="18" y2="18" />
             <line x1="18" y1="6" x2="6" y2="18" />
           </svg>
         </button>
-        <div class="add-holding-title">종목 담기</div>
       </div>
       <div class="add-holding-search-row" id="addHoldingSearchRow">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1023,15 +1021,23 @@
             <div class="add-holding-selected-name" id="addHoldingSelectedName"></div>
             <div class="add-holding-selected-kr" id="addHoldingSelectedKr"></div>
           </div>
-          <div class="add-holding-change-btn" id="addHoldingChangeBtn">종목 변경</div>
+          <div>
+            <div class="price" id="addHoldingSelectedPrice"></div>
+            <div class="change" id="addHoldingSelectedChange"></div>
+          </div>
         </div>
+        <div class="add-holding-change-btn" id="addHoldingChangeBtn">종목 변경</div>
         <div class="add-holding-field">
           <label for="addHoldingQty">수량</label>
-          <input type="number" step="any" min="0" id="addHoldingQty" placeholder="0" inputmode="decimal" />
+          <input type="text" inputmode="decimal" id="addHoldingQty" placeholder="10 주" />
         </div>
         <div class="add-holding-field">
-          <label for="addHoldingAvgPrice" id="addHoldingAvgPriceLabel">평균 매입가</label>
-          <input type="number" step="any" min="0" id="addHoldingAvgPrice" placeholder="0" inputmode="decimal" />
+          <label for="addHoldingAvgPriceKrw">평균 매입가 (원)</label>
+          <input type="text" inputmode="decimal" id="addHoldingAvgPriceKrw" placeholder="21,874원" />
+        </div>
+        <div class="add-holding-field">
+          <label for="addHoldingAvgPriceUsd">평균 매입가 (달러)</label>
+          <input type="text" inputmode="decimal" id="addHoldingAvgPriceUsd" placeholder="$16.22" />
         </div>
         <button type="button" class="add-holding-submit" id="addHoldingSubmit">담기</button>
       </div>
@@ -1096,10 +1102,12 @@
   const addHoldingFormEl = document.getElementById('addHoldingForm');
   const addHoldingSelectedName = document.getElementById('addHoldingSelectedName');
   const addHoldingSelectedKr = document.getElementById('addHoldingSelectedKr');
+  const addHoldingSelectedPriceEl = document.getElementById('addHoldingSelectedPrice');
+  const addHoldingSelectedChangeEl = document.getElementById('addHoldingSelectedChange');
   const addHoldingChangeBtn = document.getElementById('addHoldingChangeBtn');
   const addHoldingQtyInput = document.getElementById('addHoldingQty');
-  const addHoldingAvgPriceInput = document.getElementById('addHoldingAvgPrice');
-  const addHoldingAvgPriceLabel = document.getElementById('addHoldingAvgPriceLabel');
+  const addHoldingAvgPriceKrwInput = document.getElementById('addHoldingAvgPriceKrw');
+  const addHoldingAvgPriceUsdInput = document.getElementById('addHoldingAvgPriceUsd');
   const addHoldingSubmitBtn = document.getElementById('addHoldingSubmit');
 
   function moveNavHighlight(btn) {
@@ -1205,6 +1213,47 @@
     return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 6 });
   }
 
+  // Formats a number that's already denominated in the current display currency
+  // (no USD->KRW conversion), used for holding cost-basis figures entered directly
+  // by the user rather than derived from today's FX rate.
+  function formatNativeAmount(n) {
+    const v = Number(n);
+    if (currency === 'KRW') return Math.round(v).toLocaleString('ko-KR') + '원';
+    if (v >= 100) return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (v >= 1) return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 4 });
+    return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 6 });
+  }
+
+  // Live-formats a number input as the user types: adds thousands commas and
+  // an optional currency prefix/suffix (e.g. "21874" -> "21,874원").
+  function formatMaskedValue(raw, { prefix = '', suffix = '', decimals = 0 } = {}) {
+    if (!raw) return '';
+    const [intRaw, decRaw] = raw.split('.');
+    const intPart = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const out = decimals > 0 && decRaw !== undefined ? `${intPart}.${decRaw}` : intPart;
+    return prefix + out + suffix;
+  }
+  function attachMaskedNumberInput(el, opts) {
+    el.addEventListener('input', () => {
+      let raw = el.value.replace(/[^\d.]/g, '');
+      if (opts.decimals <= 0) {
+        raw = raw.replace(/\./g, '');
+      } else {
+        const firstDot = raw.indexOf('.');
+        if (firstDot !== -1) {
+          raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+          const [i, d] = raw.split('.');
+          raw = d.length > opts.decimals ? `${i}.${d.slice(0, opts.decimals)}` : raw;
+        }
+      }
+      el.value = formatMaskedValue(raw, opts);
+    });
+  }
+  function parseMaskedNumber(value) {
+    const n = Number(String(value).replace(/[^\d.]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function displayName(symbol) {
     return symbol.replace(/USDT$/, '');
   }
@@ -1285,10 +1334,17 @@
     const lastPrice = t ? Number(t.lastPrice) : 0;
     const changePct = t ? Number(t.priceChangePercent) : 0;
     const valueUsd = h.qty * lastPrice;
-    const costUsd = h.qty * h.avgPriceUsd;
-    const pnlUsd = valueUsd - costUsd;
-    const pnlPct = costUsd ? (pnlUsd / costUsd) * 100 : 0;
-    return { lastPrice, changePct, valueUsd, costUsd, pnlUsd, pnlPct };
+    // Current value always converts at today's FX rate (that's genuinely what
+    // it's worth right now). Cost basis uses whichever currency's price the
+    // user actually entered, with no conversion -- the won/dollar prices were
+    // recorded independently since the FX rate at "purchase" time may differ
+    // from today's, and re-deriving one from the other would drift.
+    const valueNative = currency === 'KRW' && krwRate ? valueUsd * krwRate : valueUsd;
+    const avgPriceNative = currency === 'KRW' ? h.avgPriceKrw || 0 : h.avgPriceUsd || 0;
+    const costNative = h.qty * avgPriceNative;
+    const pnlNative = valueNative - costNative;
+    const pnlPct = costNative ? (pnlNative / costNative) * 100 : 0;
+    return { lastPrice, changePct, valueNative, costNative, pnlNative, pnlPct };
   }
 
   function drawSparkline(canvas, closes) {
@@ -1341,20 +1397,20 @@
 
   function renderHome() {
     const stats = holdings.map((h) => ({ h, s: holdingStats(h) }));
-    const totalValueUsd = stats.reduce((sum, { s }) => sum + s.valueUsd, 0);
-    const totalCostUsd = stats.reduce((sum, { s }) => sum + s.costUsd, 0);
-    const totalPnlUsd = totalValueUsd - totalCostUsd;
-    const totalPnlPct = totalCostUsd ? (totalPnlUsd / totalCostUsd) * 100 : 0;
-    const pnlCls = totalPnlUsd > 0 ? 'up' : totalPnlUsd < 0 ? 'down' : '';
-    const pnlSign = totalPnlUsd > 0 ? '+' : totalPnlUsd < 0 ? '-' : '';
+    const totalValueNative = stats.reduce((sum, { s }) => sum + s.valueNative, 0);
+    const totalCostNative = stats.reduce((sum, { s }) => sum + s.costNative, 0);
+    const totalPnlNative = totalValueNative - totalCostNative;
+    const totalPnlPct = totalCostNative ? (totalPnlNative / totalCostNative) * 100 : 0;
+    const pnlCls = totalPnlNative > 0 ? 'up' : totalPnlNative < 0 ? 'down' : '';
+    const pnlSign = totalPnlNative > 0 ? '+' : totalPnlNative < 0 ? '-' : '';
 
     const portfolioHtml = `
       <div class="home-card">
         <div class="portfolio-label">내 투자</div>
-        <div class="portfolio-total">${formatPrice(totalValueUsd)}</div>
+        <div class="portfolio-total">${formatNativeAmount(totalValueNative)}</div>
         ${
           holdings.length
-            ? `<div class="portfolio-pnl ${pnlCls}">${pnlSign}${formatPrice(Math.abs(totalPnlUsd))} (${pnlSign}${Math.abs(totalPnlPct).toFixed(2)}%)</div>`
+            ? `<div class="portfolio-pnl ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(totalPnlNative))} (${pnlSign}${Math.abs(totalPnlPct).toFixed(2)}%)</div>`
             : ''
         }
         <div class="add-holding-link" id="addHoldingLink">+ 종목 담기</div>
@@ -1539,6 +1595,9 @@
     addHoldingResultsEl.style.display = '';
     addHoldingSearchRowEl.style.display = '';
     addHoldingFormEl.hidden = true;
+    addHoldingQtyInput.value = '';
+    addHoldingAvgPriceKrwInput.value = '';
+    addHoldingAvgPriceUsdInput.value = '';
     addHoldingPageEl.classList.add('open');
     addHoldingSearchInput.focus();
   }
@@ -1576,14 +1635,29 @@
     const kr = krName(name, cat);
     addHoldingSelectedName.textContent = name;
     addHoldingSelectedKr.textContent = kr || CATEGORY_LABELS[cat];
-    addHoldingAvgPriceLabel.textContent = `평균 매입가 (${currency === 'KRW' ? '원' : '달러'})`;
+
+    const t = findTicker(symbol);
+    if (t) {
+      const changePct = Number(t.priceChangePercent);
+      const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
+      const sign = changePct > 0 ? '+' : '';
+      addHoldingSelectedPriceEl.textContent = formatPrice(t.lastPrice);
+      addHoldingSelectedChangeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
+      addHoldingSelectedChangeEl.className = `change ${cls}`;
+    } else {
+      addHoldingSelectedPriceEl.textContent = '';
+      addHoldingSelectedChangeEl.textContent = '';
+    }
+
     const existing = holdings.find((h) => h.symbol === symbol);
-    addHoldingQtyInput.value = existing ? existing.qty : '';
-    addHoldingAvgPriceInput.value = existing
-      ? currency === 'KRW' && krwRate
-        ? Math.round(existing.avgPriceUsd * krwRate)
-        : existing.avgPriceUsd
+    addHoldingQtyInput.value = existing ? formatMaskedValue(String(existing.qty), { suffix: ' 주', decimals: 8 }) : '';
+    addHoldingAvgPriceKrwInput.value = existing
+      ? formatMaskedValue(String(Math.round(existing.avgPriceKrw)), { suffix: '원', decimals: 0 })
       : '';
+    addHoldingAvgPriceUsdInput.value = existing
+      ? formatMaskedValue(String(existing.avgPriceUsd), { prefix: '$', decimals: 2 })
+      : '';
+
     addHoldingSearchRowEl.style.display = 'none';
     addHoldingResultsEl.style.display = 'none';
     addHoldingFormEl.hidden = false;
@@ -2052,14 +2126,18 @@
   addHoldingSearchInput.addEventListener('input', () => {
     renderAddHoldingResults(addHoldingSearchInput.value);
   });
+  attachMaskedNumberInput(addHoldingQtyInput, { suffix: ' 주', decimals: 8 });
+  attachMaskedNumberInput(addHoldingAvgPriceKrwInput, { suffix: '원', decimals: 0 });
+  attachMaskedNumberInput(addHoldingAvgPriceUsdInput, { prefix: '$', decimals: 2 });
+
   addHoldingSubmitBtn.addEventListener('click', () => {
     if (!addHoldingSelected) return;
-    const qty = Number(addHoldingQtyInput.value);
-    const priceInput = Number(addHoldingAvgPriceInput.value);
-    if (!qty || qty <= 0 || !priceInput || priceInput <= 0) return;
-    const avgPriceUsd = currency === 'KRW' && krwRate ? priceInput / krwRate : priceInput;
+    const qty = parseMaskedNumber(addHoldingQtyInput.value);
+    const avgPriceKrw = parseMaskedNumber(addHoldingAvgPriceKrwInput.value);
+    const avgPriceUsd = parseMaskedNumber(addHoldingAvgPriceUsdInput.value);
+    if (!qty || qty <= 0 || !avgPriceKrw || avgPriceKrw <= 0 || !avgPriceUsd || avgPriceUsd <= 0) return;
     const idx = holdings.findIndex((h) => h.symbol === addHoldingSelected.symbol);
-    const entry = { symbol: addHoldingSelected.symbol, cat: addHoldingSelected.cat, qty, avgPriceUsd };
+    const entry = { symbol: addHoldingSelected.symbol, cat: addHoldingSelected.cat, qty, avgPriceKrw, avgPriceUsd };
     if (idx >= 0) holdings[idx] = entry;
     else holdings.push(entry);
     saveHoldings();
