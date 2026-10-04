@@ -1040,6 +1040,7 @@
   }
 
   const FAPI = 'https://fapi.binance.com/fapi/v1';
+  const YAHOO_PROXY = 'https://little-base-1203.inhwanbaeg99.workers.dev/';
   const TOP_N = 20;
   const REFRESH_MS = 5000;
   const FX_REFRESH_MS = 10 * 60 * 1000;
@@ -1374,21 +1375,29 @@
     const clCls = clChangePct > 0 ? 'up' : clChangePct < 0 ? 'down' : '';
     const clSign = clChangePct > 0 ? '+' : '';
 
+    function indicatorCardHtml(label, valueText, changePct) {
+      const hasChange = changePct != null;
+      const cls = hasChange ? (changePct > 0 ? 'up' : changePct < 0 ? 'down' : '') : '';
+      const sign = hasChange && changePct > 0 ? '+' : '';
+      return `
+        <div class="indicator-card">
+          <div class="indicator-label">${label}</div>
+          <div class="indicator-value">${valueText}</div>
+          ${hasChange ? `<div class="indicator-change ${cls}">${sign}${changePct.toFixed(2)}%</div>` : ''}
+        </div>
+      `;
+    }
+
     const indicatorsHtml = `
       <div>
         <div class="home-section-header">
           <div class="home-section-title">지표</div>
         </div>
         <div class="indicators-grid">
-          <div class="indicator-card">
-            <div class="indicator-label">원/달러</div>
-            <div class="indicator-value">${krwRate ? Math.round(krwRate).toLocaleString('ko-KR') + '원' : '-'}</div>
-          </div>
-          <div class="indicator-card">
-            <div class="indicator-label">WTI 유가</div>
-            <div class="indicator-value">${clTicker ? '$' + Number(clTicker.lastPrice).toFixed(2) : '-'}</div>
-            ${clTicker ? `<div class="indicator-change ${clCls}">${clSign}${clChangePct.toFixed(2)}%</div>` : ''}
-          </div>
+          ${indicatorCardHtml('원/달러', krwRate ? Math.round(krwRate).toLocaleString('ko-KR') + '원' : '-', null)}
+          ${indicatorCardHtml('WTI 유가', clTicker ? '$' + Number(clTicker.lastPrice).toFixed(2) : '-', clTicker ? clChangePct : null)}
+          ${indicatorCardHtml('VIX 변동성', vixData ? vixData.price.toFixed(2) : '-', vixData ? vixData.changePct : null)}
+          ${indicatorCardHtml('미국채 10년', us10yData ? us10yData.price.toFixed(2) + '%' : '-', us10yData ? us10yData.changePct : null)}
         </div>
       </div>
     `;
@@ -1573,6 +1582,20 @@
     }
   }
 
+  let vixData = null;
+  let us10yData = null;
+
+  async function loadVixUs10y() {
+    try {
+      const data = await fetchJson(`${YAHOO_PROXY}?symbols=${encodeURIComponent('^VIX,^TNX')}`);
+      if (data['^VIX']) vixData = data['^VIX'];
+      if (data['^TNX']) us10yData = data['^TNX'];
+      if (view === 'home') renderHome();
+    } catch (e) {
+      // keep previous values on failure
+    }
+  }
+
   async function loadMeta() {
     const data = await fetchJson(`${FAPI}/exchangeInfo`);
     data.symbols.forEach((s) => {
@@ -1719,6 +1742,8 @@
   setInterval(loadFearGreed, FX_REFRESH_MS);
   loadStockFearGreed();
   setInterval(loadStockFearGreed, FX_REFRESH_MS);
+  loadVixUs10y();
+  setInterval(loadVixUs10y, FX_REFRESH_MS);
   loadMeta().then(refreshAll);
   setInterval(refreshAll, REFRESH_MS);
 
