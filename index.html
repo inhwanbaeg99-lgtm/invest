@@ -1605,15 +1605,25 @@
   // source with the offset its feed publishes in so sorting/relative-time
   // stays correct across the mix.
   const NEWS_SOURCES = [
-    { name: '연합뉴스', url: 'https://www.yna.co.kr/rss/economy.xml', tz: '+09:00' },
-    { name: '한국경제', url: 'https://www.hankyung.com/feed/economy', tz: '+09:00' },
-    { name: '매일경제', url: 'https://www.mk.co.kr/rss/30100041/', tz: '+09:00' },
-    { name: 'CNBC Economy', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html', tz: '+00:00' },
-    { name: 'CNBC Business', url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', tz: '+00:00' },
-    { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', tz: '+00:00' },
+    { name: '한국경제', url: 'https://www.hankyung.com/feed/economy', tz: '+09:00', lang: 'ko' },
+    { name: '매일경제', url: 'https://www.mk.co.kr/rss/30100041/', tz: '+09:00', lang: 'ko' },
+    { name: 'CNBC Economy', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html', tz: '+00:00', lang: 'en' },
+    { name: 'CNBC Business', url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', tz: '+00:00', lang: 'en' },
+    { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', tz: '+00:00', lang: 'en' },
   ];
   let newsItems = null;
   let newsLoading = false;
+
+  async function translateText(text) {
+    try {
+      const res = await fetchJson(
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=${encodeURIComponent(text)}`,
+      );
+      return res[0].map((seg) => seg[0]).join('');
+    } catch (e) {
+      return text;
+    }
+  }
 
   function timeAgo(dateStr, tz) {
     const diffMs = Date.now() - new Date(dateStr.replace(' ', 'T') + (tz || '+09:00')).getTime();
@@ -1647,13 +1657,22 @@
             pubDate: item.pubDate,
             sourceName: src.name,
             tz: src.tz,
+            lang: src.lang,
             ts: new Date(item.pubDate.replace(' ', 'T') + src.tz).getTime(),
           });
         });
       });
       if (merged.length) {
         merged.sort((a, b) => b.ts - a.ts);
-        newsItems = merged.slice(0, 50);
+        const top = merged.slice(0, 50);
+        await Promise.allSettled(
+          top
+            .filter((item) => item.lang === 'en')
+            .map(async (item) => {
+              item.title = await translateText(item.title);
+            }),
+        );
+        newsItems = top;
         if (view === 'news') renderNews();
       }
     } catch (e) {
