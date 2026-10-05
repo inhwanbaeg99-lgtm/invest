@@ -788,7 +788,13 @@
   .news-detail-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    margin-bottom: 16px;
+    flex: 0 0 auto;
+  }
+  .news-detail-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     margin-bottom: 20px;
     flex: 0 0 auto;
   }
@@ -806,6 +812,8 @@
     gap: 16px;
   }
   .news-detail-meta {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -819,8 +827,15 @@
     font-size: 12px;
     color: var(--ink-sub);
   }
+  .news-detail-original-link {
+    flex: 0 0 auto;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+  }
   .news-detail-title {
-    margin-top: 10px;
     font-size: 19px;
     font-weight: 800;
     line-height: 1.4;
@@ -831,21 +846,6 @@
     line-height: 1.7;
     color: var(--ink);
     white-space: pre-wrap;
-  }
-  .news-detail-original {
-    display: block;
-    flex: 0 0 auto;
-    margin-top: 16px;
-    height: 50px;
-    line-height: 50px;
-    text-align: center;
-    border-radius: 12px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    color: var(--ink);
-    text-decoration: none;
-    font-size: 14.5px;
-    font-weight: 700;
   }
 
   .chart-overlay {
@@ -1172,22 +1172,23 @@
     <div class="news-detail-inner">
       <div class="news-detail-header">
         <div class="title">Tickr</div>
-        <button type="button" class="chart-close" id="newsDetailClose" aria-label="닫기">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="6" y1="6" x2="18" y2="18" />
-            <line x1="18" y1="6" x2="6" y2="18" />
+      </div>
+      <div class="news-detail-meta-row">
+        <button type="button" class="chart-close" id="newsDetailClose" aria-label="뒤로">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-      </div>
-      <div class="news-detail-body-wrap">
         <div class="news-detail-meta">
           <span class="news-detail-source" id="newsDetailSource"></span>
           <span class="news-detail-time" id="newsDetailTime"></span>
         </div>
+        <a class="news-detail-original-link" id="newsDetailOriginal" href="#" target="_blank" rel="noopener noreferrer">원본 보기</a>
+      </div>
+      <div class="news-detail-body-wrap">
         <div class="news-detail-title" id="newsDetailTitle"></div>
         <div class="news-detail-summary" id="newsDetailSummary"></div>
       </div>
-      <a class="news-detail-original" id="newsDetailOriginal" href="#" target="_blank" rel="noopener noreferrer">원본 보기</a>
     </div>
   </div>
 
@@ -2704,76 +2705,85 @@
     loadChart();
   });
 
-  let chartSwipeX = 0;
-  let chartSwipeY = 0;
-  let chartSwipeStart = 0;
-  let chartSwipeTracking = false;
-  let chartSwipeDragging = false;
-
   function resetWrapTransform() {
     wrapEl.style.transition = 'none';
     wrapEl.style.transform = '';
   }
 
-  chartOverlay.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.chart-canvas-wrap')) {
-      chartSwipeTracking = false;
-      return;
-    }
-    chartSwipeTracking = true;
-    chartSwipeDragging = false;
-    chartSwipeX = e.touches[0].clientX;
-    chartSwipeY = e.touches[0].clientY;
-    chartSwipeStart = Date.now();
-    chartOverlay.style.transition = 'none';
-  }, { passive: true });
+  // Shared edge-swipe-to-close gesture: the overlay follows the finger and
+  // the page underneath parallaxes in, same as a native back transition.
+  // excludeSelector lets a specific child area (e.g. the chart canvas, which
+  // has its own horizontal drag-to-scrub gesture) opt out of starting a swipe.
+  function attachSwipeBack(overlayEl, closeFn, excludeSelector) {
+    let swipeX = 0;
+    let swipeY = 0;
+    let swipeStart = 0;
+    let tracking = false;
+    let dragging = false;
 
-  chartOverlay.addEventListener('touchmove', (e) => {
-    if (!chartSwipeTracking) return;
-    const dx = e.touches[0].clientX - chartSwipeX;
-    const dy = e.touches[0].clientY - chartSwipeY;
-    if (!chartSwipeDragging) {
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-      if (Math.abs(dy) > Math.abs(dx)) {
-        chartSwipeTracking = false;
+    overlayEl.addEventListener('touchstart', (e) => {
+      if (excludeSelector && e.target.closest(excludeSelector)) {
+        tracking = false;
         return;
       }
-      chartSwipeDragging = true;
-      wrapEl.style.transition = 'none';
-    }
-    e.preventDefault();
-    chartOverlay.style.transform = `translateX(${dx}px)`;
-    const progress = Math.min(Math.abs(dx) / window.innerWidth, 1);
-    const dir = dx > 0 ? 1 : -1;
-    wrapEl.style.transform = `translateX(${-dir * (1 - progress) * 30}%)`;
-  }, { passive: false });
+      tracking = true;
+      dragging = false;
+      swipeX = e.touches[0].clientX;
+      swipeY = e.touches[0].clientY;
+      swipeStart = Date.now();
+      overlayEl.style.transition = 'none';
+    }, { passive: true });
 
-  chartOverlay.addEventListener('touchend', (e) => {
-    if (!chartSwipeTracking) return;
-    chartSwipeTracking = false;
-    const dx = e.changedTouches[0].clientX - chartSwipeX;
-    const dy = e.changedTouches[0].clientY - chartSwipeY;
-    const elapsed = Date.now() - chartSwipeStart;
-    const velocity = Math.abs(dx) / Math.max(elapsed, 1);
-    chartOverlay.style.transition = 'transform 0.25s ease';
-    wrapEl.style.transition = 'transform 0.25s ease';
-    if (chartSwipeDragging && Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > 90 || velocity > 0.5)) {
+    overlayEl.addEventListener('touchmove', (e) => {
+      if (!tracking) return;
+      const dx = e.touches[0].clientX - swipeX;
+      const dy = e.touches[0].clientY - swipeY;
+      if (!dragging) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        if (Math.abs(dy) > Math.abs(dx)) {
+          tracking = false;
+          return;
+        }
+        dragging = true;
+        wrapEl.style.transition = 'none';
+      }
+      e.preventDefault();
+      overlayEl.style.transform = `translateX(${dx}px)`;
+      const progress = Math.min(Math.abs(dx) / window.innerWidth, 1);
       const dir = dx > 0 ? 1 : -1;
-      chartOverlay.style.transform = `translateX(${dir * 100}%)`;
-      wrapEl.style.transform = 'translateX(0)';
-      setTimeout(() => {
-        closeChart();
-        chartOverlay.style.transition = 'none';
-        chartOverlay.style.transform = '';
-        resetWrapTransform();
-      }, 250);
-    } else {
-      chartOverlay.style.transform = 'translateX(0)';
-      wrapEl.style.transform = 'translateX(0)';
-      if (chartSwipeDragging) setTimeout(resetWrapTransform, 250);
-    }
-    chartSwipeDragging = false;
-  }, { passive: true });
+      wrapEl.style.transform = `translateX(${-dir * (1 - progress) * 30}%)`;
+    }, { passive: false });
+
+    overlayEl.addEventListener('touchend', (e) => {
+      if (!tracking) return;
+      tracking = false;
+      const dx = e.changedTouches[0].clientX - swipeX;
+      const dy = e.changedTouches[0].clientY - swipeY;
+      const elapsed = Date.now() - swipeStart;
+      const velocity = Math.abs(dx) / Math.max(elapsed, 1);
+      overlayEl.style.transition = 'transform 0.25s ease';
+      wrapEl.style.transition = 'transform 0.25s ease';
+      if (dragging && Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > 90 || velocity > 0.5)) {
+        const dir = dx > 0 ? 1 : -1;
+        overlayEl.style.transform = `translateX(${dir * 100}%)`;
+        wrapEl.style.transform = 'translateX(0)';
+        setTimeout(() => {
+          closeFn();
+          overlayEl.style.transition = 'none';
+          overlayEl.style.transform = '';
+          resetWrapTransform();
+        }, 250);
+      } else {
+        overlayEl.style.transform = 'translateX(0)';
+        wrapEl.style.transform = 'translateX(0)';
+        if (dragging) setTimeout(resetWrapTransform, 250);
+      }
+      dragging = false;
+    }, { passive: true });
+  }
+
+  attachSwipeBack(chartOverlay, closeChart, '.chart-canvas-wrap');
+  attachSwipeBack(newsDetailPageEl, closeNewsDetail, null);
 
   if ('serviceWorker' in navigator) {
     let refreshing = false;
