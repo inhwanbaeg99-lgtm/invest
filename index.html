@@ -1578,13 +1578,28 @@
       listEl.innerHTML = headerHtml + '<div class="empty">담은 종목이 없어요.</div>';
       return;
     }
-    const gridHtml = `
-      <div class="watchlist-grid">
-        ${present.map((w) => watchlistCardHtml(w.symbol, w.cat, watchlistTabEditMode)).join('')}
-      </div>
-    `;
-    listEl.innerHTML = headerHtml + gridHtml;
-    loadSparklines();
+    const rowsHtml = present
+      .map((w, i) => {
+        const t = findTicker(w.symbol);
+        const changeNum = Number(t.priceChangePercent);
+        const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
+        const sign = changeNum > 0 ? '+' : '';
+        const name = displayName(w.symbol);
+        const kr = krName(name, w.cat);
+        return `
+          <div class="row" data-symbol="${w.symbol}" data-cat="${w.cat}">
+            <div class="rank">${watchlistTabEditMode ? `<button type="button" class="watchlist-remove-btn" data-remove="${w.symbol}">×</button>` : i + 1}</div>
+            <div class="coin">
+              <div class="coin-symbol">${name}</div>
+              ${kr ? `<div class="coin-vol">${kr}</div>` : ''}
+            </div>
+            <div class="price">${formatPrice(t.lastPrice)}</div>
+            <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
+          </div>
+        `;
+      })
+      .join('');
+    listEl.innerHTML = headerHtml + `<div class="list">${rowsHtml}</div>`;
   }
 
   function renderCurrent() {
