@@ -115,10 +115,6 @@
   .nav-btn.active {
     color: #04201d;
   }
-  .nav-btn.nav-btn-disabled {
-    opacity: 0.3;
-    cursor: default;
-  }
   .top-header {
     position: -webkit-sticky;
     position: sticky;
@@ -595,6 +591,38 @@
   }
   .fng-label.up { color: var(--up); }
   .fng-label.down { color: var(--down); }
+  .news-list {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+  }
+  .news-item {
+    display: block;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    color: inherit;
+  }
+  .news-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .news-source {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .news-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .news-time {
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--ink-sub);
+  }
 
   /* ---------- Add holding overlay ---------- */
   .add-holding-page {
@@ -1068,9 +1096,9 @@
           <path d="M11.47 3.84a.75.75 0 0 1 1.06 0l8.69 8.69a.75.75 0 1 1-1.06 1.06l-.97-.97V19.5a2.25 2.25 0 0 1-2.25 2.25h-10a2.25 2.25 0 0 1-2.25-2.25v-6.88l-.97.97a.75.75 0 1 1-1.06-1.06l8.69-8.69Z" />
         </svg>
       </button>
-      <button type="button" class="nav-btn nav-btn-disabled" id="navMyBtn" aria-label="준비 중">
+      <button type="button" class="nav-btn" id="navNewsBtn" aria-label="뉴스">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-15a3 3 0 0 0-3 3V18a3 3 0 0 0 3 3h15ZM1.5 10.146V6a3 3 0 0 1 3-3h5.379a2.25 2.25 0 0 1 1.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 0 1 3 3v1.146A4.483 4.483 0 0 0 19.5 9h-15a4.483 4.483 0 0 0-3 1.146Z" />
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M4.125 3C3.089 3 2.25 3.84 2.25 4.875V18a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V4.875C23.25 3.839 22.411 3 21.375 3H4.125ZM12 9.75a.75.75 0 0 0 0 1.5h6.75a.75.75 0 0 0 0-1.5H12Zm-.75-2.25a.75.75 0 0 1 .75-.75h6.75a.75.75 0 0 1 0 1.5H12a.75.75 0 0 1-.75-.75Zm0 6a.75.75 0 0 1 .75-.75h6.75a.75.75 0 0 1 0 1.5H12a.75.75 0 0 1-.75-.75ZM6 12.75a.75.75 0 0 0-.75.75v3c0 .414.336.75.75.75h3a.75.75 0 0 0 .75-.75v-3a.75.75 0 0 0-.75-.75H6ZM6.75 6a.75.75 0 0 0-.75.75v3c0 .414.336.75.75.75h2.25a.75.75 0 0 0 .75-.75v-3a.75.75 0 0 0-.75-.75H6.75Z" />
         </svg>
       </button>
     </div>
@@ -1101,6 +1129,7 @@
   const currencyToggleEls = document.querySelectorAll('.currency-toggle');
   const navAllBtn = document.getElementById('navAllBtn');
   const navHomeBtn = document.getElementById('navHomeBtn');
+  const navNewsBtn = document.getElementById('navNewsBtn');
   const navHighlightEl = document.getElementById('navHighlight');
   const bottomNavBarEl = document.getElementById('bottomNavBar');
   const addHoldingPageEl = document.getElementById('addHoldingPage');
@@ -1342,6 +1371,10 @@
       renderHome();
       return;
     }
+    if (view === 'news') {
+      renderNews();
+      return;
+    }
     const filtered = fullTickers.filter(categoryFilter);
     filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
     rawTickers = mode === 'us' || mode === 'crypto' ? filtered.slice(0, TOP_N) : filtered;
@@ -1564,6 +1597,65 @@
 
     listEl.innerHTML = portfolioHtml + watchlistHtml + indicatorsHtml + fearGreedHtml;
     if (holdings.length) loadSparklines();
+  }
+
+  const NEWS_RSS_URL = 'https://www.yna.co.kr/rss/economy.xml';
+  let newsItems = null;
+  let newsLoading = false;
+
+  function timeAgo(dateStr) {
+    const diffMs = Date.now() - new Date(dateStr.replace(' ', 'T') + '+09:00').getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return '방금 전';
+    if (mins < 60) return `${mins}분 전`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}시간 전`;
+    return `${Math.floor(hours / 24)}일 전`;
+  }
+
+  async function loadNews() {
+    if (newsLoading) return;
+    newsLoading = true;
+    try {
+      const data = await fetchJson(
+        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(NEWS_RSS_URL)}`,
+      );
+      if (data && data.status === 'ok') {
+        newsItems = data.items.slice(0, 30);
+        if (view === 'news') renderNews();
+      }
+    } catch (e) {
+      // keep previous items on failure
+    } finally {
+      newsLoading = false;
+    }
+  }
+
+  function renderNews() {
+    if (!newsItems) {
+      listEl.innerHTML = '<div class="empty">뉴스를 불러오는 중...</div>';
+      loadNews();
+      return;
+    }
+    const newsHtml = `
+      <div class="home-card">
+        <div class="portfolio-label">뉴스</div>
+        <div class="news-list">
+          ${newsItems
+            .map(
+              (item) => `
+                <a class="news-item" href="${item.link}" target="_blank" rel="noopener noreferrer">
+                  <div class="news-source">연합뉴스</div>
+                  <div class="news-title">${item.title}</div>
+                  <div class="news-time">${timeAgo(item.pubDate)}</div>
+                </a>
+              `,
+            )
+            .join('')}
+        </div>
+      </div>
+    `;
+    listEl.innerHTML = newsHtml;
   }
 
   function renderSearchRow(t, cat) {
@@ -1795,18 +1887,23 @@
     searchPageEl.classList.remove('open');
   }
 
+  function navButtonFor(v) {
+    return v === 'home' ? navHomeBtn : v === 'news' ? navNewsBtn : navAllBtn;
+  }
+
   function applyViewVisibility() {
-    const isHome = view === 'home';
-    searchIconBtn.style.display = isHome ? 'none' : '';
-    if (isHome) closeSearch();
-    modeTabsEl.style.display = isHome ? 'none' : '';
-    listEl.classList.toggle('home-view', isHome);
+    const hideTabs = view === 'home' || view === 'news';
+    searchIconBtn.style.display = hideTabs ? 'none' : '';
+    if (hideTabs) closeSearch();
+    modeTabsEl.style.display = hideTabs ? 'none' : '';
+    listEl.classList.toggle('home-view', hideTabs);
   }
 
   function setMode(next) {
     view = 'all';
     navAllBtn.classList.add('active');
     navHomeBtn.classList.remove('active');
+    navNewsBtn.classList.remove('active');
     if (mode !== next) {
       mode = next;
       let activeBtn = null;
@@ -1827,12 +1924,13 @@
     view = next;
     navHomeBtn.classList.toggle('active', view === 'home');
     navAllBtn.classList.toggle('active', view === 'all');
-    moveNavHighlight(view === 'home' ? navHomeBtn : navAllBtn);
+    navNewsBtn.classList.toggle('active', view === 'news');
+    moveNavHighlight(navButtonFor(view));
     applyViewVisibility();
     renderCurrent();
   }
 
-  moveNavHighlight(view === 'home' ? navHomeBtn : navAllBtn);
+  moveNavHighlight(navButtonFor(view));
   applyViewVisibility();
   setTimeout(() => bottomNavBarEl.classList.add('ready'), 500);
 
@@ -1852,6 +1950,7 @@
 
   navHomeBtn.addEventListener('click', () => setView('home'));
   navAllBtn.addEventListener('click', () => setView('all'));
+  navNewsBtn.addEventListener('click', () => setView('news'));
 
   searchInputEl.addEventListener('input', () => {
     performGlobalSearch(searchInputEl.value);
