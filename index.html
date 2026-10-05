@@ -1599,12 +1599,24 @@
     if (holdings.length) loadSparklines();
   }
 
-  const NEWS_RSS_URL = 'https://www.yna.co.kr/rss/economy.xml';
+  // rss2json passes each feed's pubDate through without converting timezones,
+  // so "같은 시각처럼 보이는" strings actually mean different instants per
+  // source (confirmed: CNBC's feed is GMT, Korean outlets are KST). Tag each
+  // source with the offset its feed publishes in so sorting/relative-time
+  // stays correct across the mix.
+  const NEWS_SOURCES = [
+    { name: '연합뉴스', url: 'https://www.yna.co.kr/rss/economy.xml', tz: '+09:00' },
+    { name: '한국경제', url: 'https://www.hankyung.com/feed/economy', tz: '+09:00' },
+    { name: '매일경제', url: 'https://www.mk.co.kr/rss/30100041/', tz: '+09:00' },
+    { name: 'CNBC Economy', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html', tz: '+00:00' },
+    { name: 'CNBC Business', url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', tz: '+00:00' },
+    { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', tz: '+00:00' },
+  ];
   let newsItems = null;
   let newsLoading = false;
 
-  function timeAgo(dateStr) {
-    const diffMs = Date.now() - new Date(dateStr.replace(' ', 'T') + '+09:00').getTime();
+  function timeAgo(dateStr, tz) {
+    const diffMs = Date.now() - new Date(dateStr.replace(' ', 'T') + (tz || '+09:00')).getTime();
     const mins = Math.floor(diffMs / 60000);
     if (mins < 1) return '방금 전';
     if (mins < 60) return `${mins}분 전`;
@@ -1617,11 +1629,31 @@
     if (newsLoading) return;
     newsLoading = true;
     try {
-      const data = await fetchJson(
-        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(NEWS_RSS_URL)}`,
+      const results = await Promise.allSettled(
+        NEWS_SOURCES.map((src) =>
+          fetchJson(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}`).then(
+            (data) => ({ src, data }),
+          ),
+        ),
       );
-      if (data && data.status === 'ok') {
-        newsItems = data.items.slice(0, 30);
+      const merged = [];
+      results.forEach((r) => {
+        if (r.status !== 'fulfilled' || !r.value.data || r.value.data.status !== 'ok') return;
+        const { src, data } = r.value;
+        data.items.forEach((item) => {
+          merged.push({
+            title: item.title,
+            link: item.link,
+            pubDate: item.pubDate,
+            sourceName: src.name,
+            tz: src.tz,
+            ts: new Date(item.pubDate.replace(' ', 'T') + src.tz).getTime(),
+          });
+        });
+      });
+      if (merged.length) {
+        merged.sort((a, b) => b.ts - a.ts);
+        newsItems = merged.slice(0, 50);
         if (view === 'news') renderNews();
       }
     } catch (e) {
@@ -1645,9 +1677,9 @@
             .map(
               (item) => `
                 <a class="news-item" href="${item.link}" target="_blank" rel="noopener noreferrer">
-                  <div class="news-source">연합뉴스</div>
+                  <div class="news-source">${item.sourceName}</div>
                   <div class="news-title">${item.title}</div>
-                  <div class="news-time">${timeAgo(item.pubDate)}</div>
+                  <div class="news-time">${timeAgo(item.pubDate, item.tz)}</div>
                 </a>
               `,
             )
