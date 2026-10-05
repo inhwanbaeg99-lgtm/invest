@@ -1932,7 +1932,6 @@
   let currentRange = '1D';
   let chartCloses = [];
   let chartTimes = [];
-  let currentHoldingAvgPriceUsd = null;
   let scrubbing = false;
 
   function drawChart(closes, hoverIdx) {
@@ -1982,24 +1981,6 @@
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
-
-    if (currentHoldingAvgPriceUsd != null && currentHoldingAvgPriceUsd >= min && currentHoldingAvgPriceUsd <= max) {
-      const avgY = padTop + (1 - (currentHoldingAvgPriceUsd - min) / range) * usableH;
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(0, avgY);
-      ctx.lineTo(w, avgY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(255,255,255,0.75)';
-      ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.textBaseline = avgY < padTop + 12 ? 'top' : 'bottom';
-      ctx.fillText('내 평균', 6, avgY < padTop + 12 ? avgY + 3 : avgY - 3);
-      ctx.restore();
-    }
 
     if (hoverIdx != null && points[hoverIdx]) {
       const [hx, hy] = points[hoverIdx];
@@ -2116,8 +2097,6 @@
     const kr = krName(name, cat);
     chartSymbolKrEl.textContent = kr || '';
     chartSymbolKrEl.style.display = kr ? '' : 'none';
-    const holding = holdings.find((h) => h.symbol === symbol);
-    currentHoldingAvgPriceUsd = holding ? holding.avgPriceUsd : null;
     chartOverlay.classList.add('open');
     loadChart();
   }
@@ -2125,7 +2104,6 @@
   function closeChart() {
     chartOverlay.classList.remove('open');
     currentSymbol = null;
-    currentHoldingAvgPriceUsd = null;
   }
 
   listEl.addEventListener('click', (e) => {
