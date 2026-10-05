@@ -2421,7 +2421,11 @@
       sessionClose = localToUtc(cfg.closeMin, dayOffset);
     }
 
-    return { start: sessionOpen, end: Math.max(Math.min(now.getTime(), sessionClose), sessionOpen + 60000) };
+    return {
+      start: sessionOpen,
+      end: Math.max(Math.min(now.getTime(), sessionClose), sessionOpen + 60000),
+      fullEnd: sessionClose,
+    };
   }
 
   let currentSymbol = null;
@@ -2430,9 +2434,10 @@
   let chartCloses = [];
   let chartTimes = [];
   let chartRealStartIdx = 0;
+  let chartTimeDomain = null;
   let scrubbing = false;
 
-  function drawChart(closes, hoverIdx, realStartIdx) {
+  function drawChart(closes, times, hoverIdx, realStartIdx, timeDomain) {
     const wrap = chartCanvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
     const w = wrap.clientWidth;
@@ -2454,8 +2459,13 @@
     const padBottom = 10;
     const usableH = h - padTop - padBottom;
 
+    // A regular-session 1D chart reserves the full open-to-close width even while the
+    // session is still in progress -- real candles only occupy the elapsed portion
+    // (mapped by actual time, not by index), leaving the rest of the day blank.
     const points = closes.map((c, i) => {
-      const x = (i / (closes.length - 1)) * w;
+      const x = timeDomain
+        ? ((times[i] - timeDomain[0]) / (timeDomain[1] - timeDomain[0])) * w
+        : (i / (closes.length - 1)) * w;
       const y = padTop + (1 - (c - min) / range) * usableH;
       return [x, y];
     });
@@ -2490,6 +2500,29 @@
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
+
+    // Session still in progress -- draw a dashed reference line at the current
+    // price out to the right edge, and mark the live point with a dot.
+    const lastPt = points[points.length - 1];
+    if (timeDomain && lastPt[0] < w - 1) {
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#8a8f9899';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(lastPt[0], lastPt[1]);
+      ctx.lineTo(w, lastPt[1]);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(lastPt[0], lastPt[1], 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#0a0b0d';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     if (hoverIdx != null && points[hoverIdx]) {
       const [hx, hy] = points[hoverIdx];
@@ -2528,14 +2561,34 @@
     if (chartCloses.length < 2) return;
     const rect = chartCanvas.getBoundingClientRect();
     const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
-    let idx = Math.round((x / rect.width) * (chartCloses.length - 1));
-    idx = Math.max(0, Math.min(chartCloses.length - 1, idx));
-    drawChart(chartCloses, idx, chartRealStartIdx);
+    let idx;
+    let hx;
+    if (chartTimeDomain) {
+      // Time-proportional mapping -- find the real candle nearest the scrubbed
+      // pixel's corresponding time (scrubbing past the last real point just
+      // re-selects it, since there's no data in the empty remaining session).
+      const [ds, de] = chartTimeDomain;
+      const targetTime = ds + (x / rect.width) * (de - ds);
+      idx = 0;
+      let best = Infinity;
+      for (let i = 0; i < chartTimes.length; i++) {
+        const diff = Math.abs(chartTimes[i] - targetTime);
+        if (diff < best) {
+          best = diff;
+          idx = i;
+        }
+      }
+      hx = ((chartTimes[idx] - ds) / (de - ds)) * rect.width;
+    } else {
+      idx = Math.round((x / rect.width) * (chartCloses.length - 1));
+      idx = Math.max(0, Math.min(chartCloses.length - 1, idx));
+      hx = (idx / (chartCloses.length - 1)) * rect.width;
+    }
+    drawChart(chartCloses, chartTimes, idx, chartRealStartIdx, chartTimeDomain);
     scrubDateEl.textContent = formatScrubDate(chartTimes[idx]);
     scrubPriceEl.textContent = formatPrice(chartCloses[idx]);
     chartScrubLabelEl.style.display = 'block';
     const lw = chartScrubLabelEl.offsetWidth;
-    const hx = (idx / (chartCloses.length - 1)) * rect.width;
     const left = Math.max(4, Math.min(rect.width - lw - 4, hx - lw / 2));
     chartScrubLabelEl.style.left = `${left}px`;
   }
@@ -2544,7 +2597,7 @@
     if (!scrubbing) return;
     scrubbing = false;
     chartScrubLabelEl.style.display = 'none';
-    drawChart(chartCloses, null, chartRealStartIdx);
+    drawChart(chartCloses, chartTimes, null, chartRealStartIdx, chartTimeDomain);
   }
 
   chartCanvas.addEventListener('mousedown', (e) => {
@@ -2607,7 +2660,8 @@
       chartCloses = closes;
       chartTimes = times;
       chartRealStartIdx = realStartIdx;
-      drawChart(closes, null, realStartIdx);
+      chartTimeDomain = session ? [session.start, session.fullEnd] : null;
+      drawChart(closes, times, null, realStartIdx, chartTimeDomain);
     } catch (e) {
       chartLoadingEl.textContent = '차트를 불러오지 못했습니다';
       chartLoadingEl.style.display = 'flex';
