@@ -1410,6 +1410,9 @@
   let fullTickers = [];
   let rawTickers = [];
   let symbolMeta = {};
+  // symbol+sessionStart -> that session's actual opening print, so list rows can
+  // show "since regular-session-open" change instead of Binance's rolling 24h window.
+  let sessionOpenCache = {};
   let portfolioEditMode = false;
   let watchlistTabEditMode = false;
   let addHoldingSelected = null;
@@ -1532,7 +1535,7 @@
   function renderRows(tickers) {
     return tickers
       .map((t, i) => {
-        const changeNum = Number(t.priceChangePercent);
+        const changeNum = sessionAnchoredChangePct(t.symbol, mode, Number(t.lastPrice), Number(t.priceChangePercent));
         const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
         const sign = changeNum > 0 ? '+' : '';
         const name = displayName(t.symbol);
@@ -1575,7 +1578,7 @@
     const rowsHtml = present
       .map((w, i) => {
         const t = findTicker(w.symbol);
-        const changeNum = Number(t.priceChangePercent);
+        const changeNum = sessionAnchoredChangePct(w.symbol, w.cat, Number(t.lastPrice), Number(t.priceChangePercent));
         const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
         const sign = changeNum > 0 ? '+' : '';
         const name = displayName(w.symbol);
@@ -1594,6 +1597,12 @@
       })
       .join('');
     listEl.innerHTML = headerHtml + `<div class="list">${rowsHtml}</div>`;
+
+    const byCat = {};
+    present.forEach((w) => {
+      (byCat[w.cat] = byCat[w.cat] || []).push(w.symbol);
+    });
+    Object.keys(byCat).forEach((cat) => ensureSessionOpens(byCat[cat], cat));
   }
 
   function renderCurrent() {
@@ -1613,6 +1622,7 @@
     filtered.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
     rawTickers = mode === 'us' || mode === 'crypto' ? filtered.slice(0, TOP_N) : filtered;
     render(rawTickers);
+    ensureSessionOpens(rawTickers.map((t) => t.symbol), mode);
   }
 
   function findTicker(symbol) {
@@ -2399,6 +2409,11 @@
   function getRegularSession(cat, now) {
     const cfg = MARKET_HOURS[cat];
     if (!cfg) return null;
+    // Round to the minute: tzOffsetMinutes truncates to whole seconds internally,
+    // so an un-rounded `now` makes session.start jitter by sub-second amounts
+    // across calls -- and since that value is used as a cache key elsewhere,
+    // that jitter alone was enough to make every call look like a cache miss.
+    now = new Date(Math.floor(now.getTime() / 60000) * 60000);
     const offsetMin = tzOffsetMinutes(now, cfg.tz);
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: cfg.tz, hourCycle: 'h23', weekday: 'short',
@@ -2428,6 +2443,43 @@
     };
   }
 
+  // "Since regular-session-open" change% for list rows, falling back to Binance's
+  // rolling 24h priceChangePercent (crypto, or while the open print hasn't loaded yet).
+  function sessionAnchoredChangePct(symbol, cat, lastPrice, fallbackPct) {
+    if (!MARKET_HOURS[cat]) return fallbackPct;
+    const session = getRegularSession(cat, new Date());
+    if (!session) return fallbackPct;
+    const openPrice = sessionOpenCache[symbol + '|' + session.start];
+    if (openPrice == null) return fallbackPct;
+    return ((lastPrice - openPrice) / openPrice) * 100;
+  }
+
+  // Fetches each symbol's actual opening print for the current session once (cached
+  // for the rest of that session), throttled so a ~70-symbol tab doesn't fire 70
+  // concurrent requests at once. Re-renders whatever's on screen as results land.
+  async function ensureSessionOpens(symbols, cat) {
+    if (!MARKET_HOURS[cat] || !symbols.length) return;
+    const session = getRegularSession(cat, new Date());
+    if (!session) return;
+    const key = session.start;
+    const missing = symbols.filter((s) => sessionOpenCache[s + '|' + key] == null);
+    if (!missing.length) return;
+    let idx = 0;
+    async function worker() {
+      while (idx < missing.length) {
+        const symbol = missing[idx++];
+        try {
+          const kl = await fetchJson(`${FAPI}/klines?symbol=${symbol}&interval=15m&startTime=${key}&limit=1`);
+          if (kl.length) sessionOpenCache[symbol + '|' + key] = Number(kl[0][1]);
+        } catch (e) {
+          // leave uncached -- row keeps showing the rolling-24h fallback
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(6, missing.length) }, worker));
+    renderCurrent();
+  }
+
   let currentSymbol = null;
   let currentCat = null;
   let currentRange = '1D';
@@ -2436,9 +2488,10 @@
   let chartRealStartIdx = 0;
   let chartTimeDomain = null;
   let chartPrevClose = null;
+  let chartRefValue = null;
   let scrubbing = false;
 
-  function drawChart(closes, times, hoverIdx, realStartIdx, timeDomain, prevClose) {
+  function drawChart(closes, times, hoverIdx, realStartIdx, timeDomain, prevClose, refValue) {
     const wrap = chartCanvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
     const w = wrap.clientWidth;
@@ -2454,7 +2507,7 @@
     const min = prevClose != null ? Math.min(...closes, prevClose) : Math.min(...closes);
     const max = prevClose != null ? Math.max(...closes, prevClose) : Math.max(...closes);
     const range = max - min || 1;
-    const up = closes[closes.length - 1] >= closes[startIdx];
+    const up = closes[closes.length - 1] >= (refValue != null ? refValue : closes[startIdx]);
     const color = up ? '#2ecc71' : '#ff5c5c';
     const padTop = 56;
     const padBottom = 10;
@@ -2517,6 +2570,19 @@
         ctx.lineTo(w, prevCloseY);
         ctx.stroke();
         ctx.restore();
+
+        // Small price label at the line's right end, with a background cutout
+        // so the dashes don't run straight through the digits.
+        const label = formatPrice(prevClose);
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+        const labelW = ctx.measureText(label).width;
+        const labelX = w - 6;
+        ctx.fillStyle = '#0a0b0d';
+        ctx.fillRect(labelX - labelW - 4, prevCloseY - 7, labelW + 8, 14);
+        ctx.fillStyle = '#8a8f98';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, labelX, prevCloseY);
       }
 
       ctx.beginPath();
@@ -2588,7 +2654,7 @@
       idx = Math.max(0, Math.min(chartCloses.length - 1, idx));
       hx = (idx / (chartCloses.length - 1)) * rect.width;
     }
-    drawChart(chartCloses, chartTimes, idx, chartRealStartIdx, chartTimeDomain, chartPrevClose);
+    drawChart(chartCloses, chartTimes, idx, chartRealStartIdx, chartTimeDomain, chartPrevClose, chartRefValue);
     scrubDateEl.textContent = formatScrubDate(chartTimes[idx]);
     scrubPriceEl.textContent = formatPrice(chartCloses[idx]);
     chartScrubLabelEl.style.display = 'block';
@@ -2601,7 +2667,7 @@
     if (!scrubbing) return;
     scrubbing = false;
     chartScrubLabelEl.style.display = 'none';
-    drawChart(chartCloses, chartTimes, null, chartRealStartIdx, chartTimeDomain, chartPrevClose);
+    drawChart(chartCloses, chartTimes, null, chartRealStartIdx, chartTimeDomain, chartPrevClose, chartRefValue);
   }
 
   chartCanvas.addEventListener('mousedown', (e) => {
@@ -2634,7 +2700,9 @@
       const klines = await fetchJson(url);
       let closes = klines.map((k) => Number(k[4]));
       let times = klines.map((k) => Number(k[0]));
-      const first = closes[0];
+      // For a session-anchored 1D chart, use the first candle's own open print
+      // (not its close) so this matches the session's actual opening price.
+      const first = session && klines.length ? Number(klines[0][1]) : closes[0];
       const last = closes[closes.length - 1];
       const changePct = ((last - first) / first) * 100;
       const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
@@ -2665,6 +2733,9 @@
       chartTimes = times;
       chartRealStartIdx = realStartIdx;
       chartTimeDomain = session ? [session.start, session.fullEnd] : null;
+      // Same value the header %/sign is computed from, so the line's up/down
+      // color can't disagree with the sign shown above it.
+      chartRefValue = first;
 
       // Reference line: the prior regular session's actual closing print, not
       // today's live price -- fetched separately since it sits before `session.start`.
@@ -2683,7 +2754,7 @@
         }
       }
 
-      drawChart(closes, times, null, realStartIdx, chartTimeDomain, chartPrevClose);
+      drawChart(closes, times, null, realStartIdx, chartTimeDomain, chartPrevClose, chartRefValue);
     } catch (e) {
       chartLoadingEl.textContent = '차트를 불러오지 못했습니다';
       chartLoadingEl.style.display = 'flex';
