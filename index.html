@@ -2363,14 +2363,22 @@
     '5Y': { interval: '1w', limit: 260 },
     ALL: { interval: '1M', limit: 1000 },
   };
+  const INTERVAL_MS = {
+    '15m': 15 * 60 * 1000,
+    '1h': 60 * 60 * 1000,
+    '1d': 24 * 60 * 60 * 1000,
+    '1w': 7 * 24 * 60 * 60 * 1000,
+    '1M': 30 * 24 * 60 * 60 * 1000,
+  };
 
   let currentSymbol = null;
   let currentRange = '1D';
   let chartCloses = [];
   let chartTimes = [];
+  let chartRealStartIdx = 0;
   let scrubbing = false;
 
-  function drawChart(closes, hoverIdx) {
+  function drawChart(closes, hoverIdx, realStartIdx) {
     const wrap = chartCanvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
     const w = wrap.clientWidth;
@@ -2382,10 +2390,11 @@
 
     if (closes.length < 2) return;
 
+    const startIdx = Math.max(0, Math.min(closes.length - 1, realStartIdx || 0));
     const min = Math.min(...closes);
     const max = Math.max(...closes);
     const range = max - min || 1;
-    const up = closes[closes.length - 1] >= closes[0];
+    const up = closes[closes.length - 1] >= closes[startIdx];
     const color = up ? '#2ecc71' : '#ff5c5c';
     const padTop = 56;
     const padBottom = 10;
@@ -2402,17 +2411,27 @@
     gradient.addColorStop(1, color + '00');
 
     ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    points.forEach(([x, y]) => ctx.lineTo(x, y));
+    ctx.moveTo(points[startIdx][0], points[startIdx][1]);
+    for (let i = startIdx; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
     ctx.lineTo(points[points.length - 1][0], h);
-    ctx.lineTo(points[0][0], h);
+    ctx.lineTo(points[startIdx][0], h);
     ctx.closePath();
     ctx.fillStyle = gradient;
     ctx.fill();
 
+    if (startIdx > 0) {
+      ctx.beginPath();
+      ctx.moveTo(points[0][0], points[0][1]);
+      for (let i = 0; i <= startIdx; i++) ctx.lineTo(points[i][0], points[i][1]);
+      ctx.strokeStyle = '#8a8f9880';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+
     ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    points.forEach(([x, y]) => ctx.lineTo(x, y));
+    ctx.moveTo(points[startIdx][0], points[startIdx][1]);
+    for (let i = startIdx; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
@@ -2457,7 +2476,7 @@
     const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
     let idx = Math.round((x / rect.width) * (chartCloses.length - 1));
     idx = Math.max(0, Math.min(chartCloses.length - 1, idx));
-    drawChart(chartCloses, idx);
+    drawChart(chartCloses, idx, chartRealStartIdx);
     scrubDateEl.textContent = formatScrubDate(chartTimes[idx]);
     scrubPriceEl.textContent = formatPrice(chartCloses[idx]);
     chartScrubLabelEl.style.display = 'block';
@@ -2471,7 +2490,7 @@
     if (!scrubbing) return;
     scrubbing = false;
     chartScrubLabelEl.style.display = 'none';
-    drawChart(chartCloses);
+    drawChart(chartCloses, null, chartRealStartIdx);
   }
 
   chartCanvas.addEventListener('mousedown', (e) => {
@@ -2500,8 +2519,8 @@
       const klines = await fetchJson(
         `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`,
       );
-      const closes = klines.map((k) => Number(k[4]));
-      const times = klines.map((k) => Number(k[0]));
+      let closes = klines.map((k) => Number(k[4]));
+      let times = klines.map((k) => Number(k[0]));
       const first = closes[0];
       const last = closes[closes.length - 1];
       const changePct = ((last - first) / first) * 100;
@@ -2511,9 +2530,26 @@
       chartPriceSecondaryEl.textContent = formatSecondaryPrice(last);
       chartChangeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
       chartChangeEl.className = `chart-change ${cls}`;
+
+      // Symbols listed more recently than the selected range (e.g. a 6-month-old
+      // ETF on a 5Y chart) get fewer candles back than `limit` -- pad the front
+      // with the listing price so the time axis still spans the full range
+      // instead of the real data stretching to fill the whole chart width.
+      let realStartIdx = 0;
+      if (currentRange !== 'ALL' && closes.length < limit && closes.length > 0) {
+        const padCount = limit - closes.length;
+        const stepMs = INTERVAL_MS[interval] || 0;
+        const padClosesArr = new Array(padCount).fill(closes[0]);
+        const padTimesArr = Array.from({ length: padCount }, (_, i) => times[0] - (padCount - i) * stepMs);
+        closes = padClosesArr.concat(closes);
+        times = padTimesArr.concat(times);
+        realStartIdx = padCount;
+      }
+
       chartCloses = closes;
       chartTimes = times;
-      drawChart(closes);
+      chartRealStartIdx = realStartIdx;
+      drawChart(closes, null, realStartIdx);
     } catch (e) {
       chartLoadingEl.textContent = '차트를 불러오지 못했습니다';
       chartLoadingEl.style.display = 'flex';
