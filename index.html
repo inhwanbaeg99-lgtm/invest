@@ -460,42 +460,6 @@
     color: var(--ink-sub);
     cursor: pointer;
   }
-  .watchlist-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .watchlist-item {
-    position: relative;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px;
-    cursor: pointer;
-  }
-  .watchlist-item-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  .watchlist-symbol {
-    min-width: 0;
-  }
-  .watchlist-symbol-name {
-    font-size: 14px;
-    font-weight: 800;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .watchlist-symbol-kr {
-    font-size: 11px;
-    color: var(--ink-sub);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
   .watchlist-remove-btn {
     flex: 0 0 auto;
     width: 22px;
@@ -511,30 +475,75 @@
     justify-content: center;
     cursor: pointer;
   }
-  .watchlist-sparkline {
-    width: 100%;
-    height: 40px;
-    display: block;
-    margin-bottom: 8px;
+  .holding-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.15s ease;
   }
-  .watchlist-price {
+  .holding-row:last-child {
+    border-bottom: none;
+  }
+  .holding-row:hover {
+    background: #1a1d22;
+  }
+  .holding-badge-slot {
+    flex: 0 0 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .holding-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #04201d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .holding-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .holding-name {
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .holding-sub {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--ink-sub);
+  }
+  .holding-right {
+    flex: 0 0 auto;
+    text-align: right;
+  }
+  .holding-value {
     font-size: 15px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
-  .watchlist-change {
+  .holding-pnl {
     margin-top: 2px;
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
-  .watchlist-change.up { color: var(--up); }
-  .watchlist-change.down { color: var(--down); }
-  .watchlist-qty {
-    margin-top: 6px;
-    font-size: 11px;
-    color: var(--ink-sub);
-  }
+  .holding-pnl.up { color: var(--up); }
+  .holding-pnl.down { color: var(--down); }
   .indicators-table {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1023,8 +1032,8 @@
       </div>
       <div class="mode-tabs-wrap">
         <div class="mode-tabs" id="modeTabs">
-          <button type="button" class="mode-tab" data-mode="watchlist">관심종목</button>
-          <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
+          <button type="button" class="mode-tab active" data-mode="watchlist">관심종목</button>
+          <button type="button" class="mode-tab" data-mode="domestic">국내주식</button>
           <button type="button" class="mode-tab" data-mode="us">미국주식</button>
           <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
           <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
@@ -1195,7 +1204,13 @@
   <div class="add-holding-page" id="portfolioDetailPage">
     <div class="add-holding-inner">
       <div class="add-holding-header">
-        <div class="title">Tickr</div>
+        <div class="title-group">
+          <div class="title">Tickr</div>
+          <div class="currency-toggle" id="portfolioCurrencyToggle">
+            <button type="button" class="currency-btn" data-currency="USD">$</button>
+            <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
+          </div>
+        </div>
         <button type="button" class="chart-close" id="portfolioDetailClose" aria-label="닫기">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -1318,6 +1333,9 @@
 
   // 레버리지/인버스 ETF와 지수 추종 ETF는 바이낸스 선물 API에서 EQUITY로 묶여 있어서 직접 분리
   const LEVERAGE_TICKERS = new Set(['SOXL', 'SOXS', 'TQQQ', 'SQQQ', 'KORU', 'RAM', 'RAMZ', 'UVXY']);
+  const LEVERAGE_MULTIPLIER = {
+    SOXL: 3, SOXS: 3, TQQQ: 3, SQQQ: 3, KORU: 3, RAM: 2, RAMZ: 2, UVXY: 1.5,
+  };
   const INDEX_COMMODITY_TICKERS = new Set([
     'XAU', 'CL', 'XAG', 'BZ', 'QQQ', 'EWY', 'SPY', 'NATGAS', 'COPPER',
     'XPD', 'SMH', 'IWM', 'EWZ', 'EWJ', 'GDX', 'EWT', 'XLE', 'XBI',
@@ -1384,7 +1402,7 @@
     },
   };
 
-  let mode = 'domestic';
+  let mode = 'watchlist';
   let view = 'home';
   let currency = 'KRW';
   let krwRate = null;
@@ -1541,31 +1559,6 @@
     listEl.innerHTML = renderRows(tickers);
   }
 
-  function watchlistCardHtml(symbol, cat, editMode, footerHtml) {
-    const t = findTicker(symbol);
-    if (!t) return '';
-    const changeNum = Number(t.priceChangePercent);
-    const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
-    const sign = changeNum > 0 ? '+' : '';
-    const name = displayName(symbol);
-    const kr = krName(name, cat);
-    return `
-      <div class="watchlist-item" data-symbol="${symbol}" data-cat="${cat}">
-        <div class="watchlist-item-top">
-          <div class="watchlist-symbol">
-            <div class="watchlist-symbol-name">${name}</div>
-            ${kr ? `<div class="watchlist-symbol-kr">${kr}</div>` : ''}
-          </div>
-          ${editMode ? `<button type="button" class="watchlist-remove-btn" data-remove="${symbol}">×</button>` : ''}
-        </div>
-        <canvas class="watchlist-sparkline" data-sparkline="${symbol}"></canvas>
-        <div class="watchlist-price">${formatPrice(t.lastPrice)}</div>
-        <div class="watchlist-change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
-        ${footerHtml || ''}
-      </div>
-    `;
-  }
-
   function renderWatchlistTab() {
     const headerHtml = `
       <div class="home-section-header">
@@ -1641,54 +1634,6 @@
     const pnlNative = valueNative - costNative;
     const pnlPct = costNative ? (pnlNative / costNative) * 100 : 0;
     return { lastPrice, changePct, valueNative, costNative, pnlNative, pnlPct };
-  }
-
-  function drawSparkline(canvas, closes) {
-    if (!canvas || closes.length < 2) return;
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    if (!w || !h) return;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    const min = Math.min(...closes);
-    const max = Math.max(...closes);
-    const range = max - min || 1;
-    const up = closes[closes.length - 1] >= closes[0];
-    const color = up ? '#2ecc71' : '#ff5c5c';
-    const pad = 3;
-    const usableH = h - pad * 2;
-    const points = closes.map((c, i) => {
-      const x = (i / (closes.length - 1)) * w;
-      const y = pad + (1 - (c - min) / range) * usableH;
-      return [x, y];
-    });
-    ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    points.forEach(([x, y]) => ctx.lineTo(x, y));
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-  }
-
-  async function loadSparklines(root) {
-    const canvases = (root || listEl).querySelectorAll('[data-sparkline]');
-    await Promise.all(
-      [...canvases].map(async (canvas) => {
-        const symbol = canvas.dataset.sparkline;
-        try {
-          const klines = await fetchJson(`${FAPI}/klines?symbol=${symbol}&interval=15m&limit=96`);
-          const closes = klines.map((k) => Number(k[4]));
-          drawSparkline(canvas, closes);
-        } catch (e) {
-          // leave blank on failure
-        }
-      }),
-    );
   }
 
   function renderHome() {
@@ -1802,6 +1747,33 @@
     listEl.innerHTML = portfolioHtml + indicatorsHtml + fearGreedHtml;
   }
 
+  function holdingRowHtml(h, s, editMode) {
+    const t = findTicker(h.symbol);
+    if (!t) return '';
+    const name = displayName(h.symbol);
+    const mult = LEVERAGE_MULTIPLIER[name];
+    const pnlCls = s.pnlNative > 0 ? 'up' : s.pnlNative < 0 ? 'down' : '';
+    const pnlSign = s.pnlNative > 0 ? '+' : s.pnlNative < 0 ? '-' : '';
+    const badgeHtml = editMode
+      ? `<button type="button" class="watchlist-remove-btn" data-remove="${h.symbol}">×</button>`
+      : mult
+        ? `<div class="holding-badge">${mult}x</div>`
+        : '';
+    return `
+      <div class="holding-row" data-symbol="${h.symbol}" data-cat="${h.cat}">
+        <div class="holding-badge-slot">${badgeHtml}</div>
+        <div class="holding-info">
+          <div class="holding-name">${name}</div>
+          <div class="holding-sub">${h.qty.toLocaleString('ko-KR')}주</div>
+        </div>
+        <div class="holding-right">
+          <div class="holding-value">${formatNativeAmount(s.valueNative)}</div>
+          <div class="holding-pnl ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(s.pnlNative))} (${pnlSign}${Math.abs(s.pnlPct).toFixed(1)}%)</div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderPortfolioDetail() {
     const stats = holdings.map((h) => ({ h, s: holdingStats(h) }));
     const totalValueNative = stats.reduce((sum, { s }) => sum + s.valueNative, 0);
@@ -1831,17 +1803,14 @@
           <div class="home-section-title">보유 종목</div>
           <div class="home-edit-link" id="portfolioEditLink">${portfolioEditMode ? '완료' : '편집'}</div>
         </div>
-        <div class="watchlist-grid">
-          ${stats
-            .map(({ h }) => watchlistCardHtml(h.symbol, h.cat, portfolioEditMode, `<div class="watchlist-qty">보유 ${h.qty}</div>`))
-            .join('')}
+        <div class="list">
+          ${stats.map(({ h, s }) => holdingRowHtml(h, s, portfolioEditMode)).join('')}
         </div>
       </div>
     `
       : '<div class="empty">담은 종목이 없어요.</div>';
 
     portfolioDetailBodyEl.innerHTML = summaryHtml + listHtml;
-    if (holdings.length) loadSparklines(portfolioDetailBodyEl);
   }
 
   function openPortfolioDetail() {
@@ -2347,6 +2316,7 @@
     renderCurrent();
     if (currentSymbol) loadChart();
     if (searchOpen) performGlobalSearch(searchInputEl.value);
+    if (portfolioDetailPageEl.classList.contains('open')) renderPortfolioDetail();
   }
 
   currencyToggleEls.forEach((group) => {
@@ -2596,11 +2566,6 @@
       renderWatchlistTab();
       return;
     }
-    const watchItem = e.target.closest('.watchlist-item');
-    if (watchItem) {
-      openChart(watchItem.dataset.symbol, watchItem.dataset.cat);
-      return;
-    }
     const newsItem = e.target.closest('.news-item');
     if (newsItem) {
       openNewsDetail(Number(newsItem.dataset.index));
@@ -2627,7 +2592,7 @@
       renderPortfolioDetail();
       return;
     }
-    const item = e.target.closest('.watchlist-item');
+    const item = e.target.closest('.holding-row');
     if (item) {
       closePortfolioDetail();
       openChart(item.dataset.symbol, item.dataset.cat);
