@@ -1670,6 +1670,19 @@
   }
 
   async function loadFxRate() {
+    // Upbit's KRW-USDT trade price is a genuinely live rate (updates with every
+    // trade on an active market), unlike open.er-api.com which only refreshes
+    // once a day. USDT tracks the dollar closely enough to use as a USD proxy.
+    try {
+      const data = await fetchJson('https://api.upbit.com/v1/ticker?markets=KRW-USDT');
+      const rate = data && data[0] && Number(data[0].trade_price);
+      if (rate) {
+        krwRate = rate;
+        return;
+      }
+    } catch (e) {
+      // fall through to backup source below
+    }
     try {
       const data = await fetchJson('https://open.er-api.com/v6/latest/USD');
       if (data && data.rates && data.rates.KRW) krwRate = data.rates.KRW;
@@ -1869,7 +1882,7 @@
   });
 
   loadFxRate();
-  setInterval(loadFxRate, FX_REFRESH_MS);
+  setInterval(loadFxRate, REFRESH_MS);
   loadFearGreed();
   setInterval(loadFearGreed, FX_REFRESH_MS);
   loadStockFearGreed();
