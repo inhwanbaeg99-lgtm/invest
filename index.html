@@ -2435,9 +2435,10 @@
   let chartTimes = [];
   let chartRealStartIdx = 0;
   let chartTimeDomain = null;
+  let chartPrevClose = null;
   let scrubbing = false;
 
-  function drawChart(closes, times, hoverIdx, realStartIdx, timeDomain) {
+  function drawChart(closes, times, hoverIdx, realStartIdx, timeDomain, prevClose) {
     const wrap = chartCanvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
     const w = wrap.clientWidth;
@@ -2450,8 +2451,8 @@
     if (closes.length < 2) return;
 
     const startIdx = Math.max(0, Math.min(closes.length - 1, realStartIdx || 0));
-    const min = Math.min(...closes);
-    const max = Math.max(...closes);
+    const min = prevClose != null ? Math.min(...closes, prevClose) : Math.min(...closes);
+    const max = prevClose != null ? Math.max(...closes, prevClose) : Math.max(...closes);
     const range = max - min || 1;
     const up = closes[closes.length - 1] >= closes[startIdx];
     const color = up ? '#2ecc71' : '#ff5c5c';
@@ -2501,19 +2502,22 @@
     ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Session still in progress -- draw a dashed reference line at the current
-    // price out to the right edge, and mark the live point with a dot.
+    // Session still in progress -- draw a dashed reference line at the prior
+    // session's actual close (not today's live price), and mark the live point with a dot.
     const lastPt = points[points.length - 1];
     if (timeDomain && lastPt[0] < w - 1) {
-      ctx.save();
-      ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = '#8a8f9899';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(lastPt[0], lastPt[1]);
-      ctx.lineTo(w, lastPt[1]);
-      ctx.stroke();
-      ctx.restore();
+      if (prevClose != null) {
+        const prevCloseY = padTop + (1 - (prevClose - min) / range) * usableH;
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#8a8f9899';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, prevCloseY);
+        ctx.lineTo(w, prevCloseY);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       ctx.beginPath();
       ctx.arc(lastPt[0], lastPt[1], 4, 0, Math.PI * 2);
@@ -2584,7 +2588,7 @@
       idx = Math.max(0, Math.min(chartCloses.length - 1, idx));
       hx = (idx / (chartCloses.length - 1)) * rect.width;
     }
-    drawChart(chartCloses, chartTimes, idx, chartRealStartIdx, chartTimeDomain);
+    drawChart(chartCloses, chartTimes, idx, chartRealStartIdx, chartTimeDomain, chartPrevClose);
     scrubDateEl.textContent = formatScrubDate(chartTimes[idx]);
     scrubPriceEl.textContent = formatPrice(chartCloses[idx]);
     chartScrubLabelEl.style.display = 'block';
@@ -2597,7 +2601,7 @@
     if (!scrubbing) return;
     scrubbing = false;
     chartScrubLabelEl.style.display = 'none';
-    drawChart(chartCloses, chartTimes, null, chartRealStartIdx, chartTimeDomain);
+    drawChart(chartCloses, chartTimes, null, chartRealStartIdx, chartTimeDomain, chartPrevClose);
   }
 
   chartCanvas.addEventListener('mousedown', (e) => {
@@ -2661,7 +2665,25 @@
       chartTimes = times;
       chartRealStartIdx = realStartIdx;
       chartTimeDomain = session ? [session.start, session.fullEnd] : null;
-      drawChart(closes, times, null, realStartIdx, chartTimeDomain);
+
+      // Reference line: the prior regular session's actual closing print, not
+      // today's live price -- fetched separately since it sits before `session.start`.
+      chartPrevClose = null;
+      if (session) {
+        try {
+          // A full minute of margin, not 1ms: tzOffsetMinutes truncates to whole
+          // seconds, so a sub-second probe can round-trip back to the same session.
+          const prevSession = getRegularSession(currentCat, new Date(session.start - 60000));
+          const prevKlines = await fetchJson(
+            `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&endTime=${prevSession.fullEnd}&limit=1`,
+          );
+          if (prevKlines.length) chartPrevClose = Number(prevKlines[prevKlines.length - 1][4]);
+        } catch (e) {
+          // leave chartPrevClose null -- the reference line just won't be drawn
+        }
+      }
+
+      drawChart(closes, times, null, realStartIdx, chartTimeDomain, chartPrevClose);
     } catch (e) {
       chartLoadingEl.textContent = '차트를 불러오지 못했습니다';
       chartLoadingEl.style.display = 'flex';
