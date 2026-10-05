@@ -1,20 +1,32 @@
-// Cloudflare Worker: Yahoo Finance proxy for Tickr
+// Cloudflare Worker: Yahoo Finance + NewsAPI proxy for Tickr
 //
 // Browsers can't call Yahoo Finance's chart API directly (no CORS headers,
-// request just fails). This worker fetches it server-side (no CORS issue
+// request just fails), and NewsAPI's free tier only allows requests from
+// localhost. This worker fetches both server-side (no CORS/origin issue
 // there) and re-serves the result with CORS enabled, so Tickr's frontend
-// can read it.
+// can read it from the deployed GitHub Pages domain too.
 //
-// Usage: GET https://<your-worker>.workers.dev/?symbols=^VIX,^TNX
+// Yahoo usage: GET https://<your-worker>.workers.dev/?symbols=^VIX,^TNX
 // Response: { "^VIX": { "price": 15.31, "changePct": -6.59 }, "^TNX": { ... } }
+//
+// News usage: GET https://<your-worker>.workers.dev/news?sources=reuters,bloomberg,associated-press
+// Response: passthrough of NewsAPI's /v2/top-headlines JSON.
+// Requires a NEWSAPI_KEY secret on this worker (dashboard -> Settings ->
+// Variables and Secrets, or `wrangler secret put NEWSAPI_KEY`) -- the key
+// never appears in this source file or in the deployed frontend.
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders() });
     }
 
     const url = new URL(request.url);
+
+    if (url.pathname === '/news') {
+      return newsProxy(url, env);
+    }
+
     const symbolsParam = url.searchParams.get('symbols') || url.searchParams.get('symbol') || '';
     const symbols = symbolsParam
       .split(',')
@@ -55,6 +67,23 @@ export default {
     return json(results, 200);
   },
 };
+
+async function newsProxy(url, env) {
+  if (!env.NEWSAPI_KEY) {
+    return json({ error: 'NEWSAPI_KEY secret not configured on this worker' }, 500);
+  }
+  const sources = url.searchParams.get('sources') || 'reuters,bloomberg,associated-press';
+  try {
+    const res = await fetch(
+      `https://newsapi.org/v2/top-headlines?sources=${encodeURIComponent(sources)}&apiKey=${env.NEWSAPI_KEY}`,
+      { cf: { cacheTtl: 300, cacheEverything: true } },
+    );
+    const data = await res.json();
+    return json(data, res.status);
+  } catch (e) {
+    return json({ error: 'upstream fetch to newsapi.org failed' }, 502);
+  }
+}
 
 function corsHeaders() {
   return {

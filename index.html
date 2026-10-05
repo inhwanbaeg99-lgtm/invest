@@ -1849,6 +1849,37 @@
   let newsItems = null;
   let newsLoading = false;
 
+  // Reuters/Bloomberg/AP via NewsAPI, proxied through the same Cloudflare Worker
+  // used for Yahoo -- NewsAPI's free tier only allows requests from localhost,
+  // and routing it server-side also keeps the API key out of this public repo.
+  async function loadNewsApiArticles() {
+    try {
+      const data = await fetchJson(`${YAHOO_PROXY}news?sources=reuters,bloomberg,associated-press`);
+      if (data.status !== 'ok') return [];
+      return data.articles.map((a) => {
+        // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending
+        // on the upstream source, which breaks timeAgo()'s RSS-style string
+        // surgery either way -- round-trip through Date and re-serialize in the
+        // same space-separated, offset-less format the RSS feeds use instead.
+        const d = new Date(a.publishedAt);
+        const pad = (n) => String(n).padStart(2, '0');
+        const pubDate = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+        return {
+          title: a.title,
+          link: a.url,
+          pubDate,
+          summary: (a.description || a.content || '').replace(/\[\+\d+ chars\]$/, '').trim(),
+          sourceName: (a.source && a.source.name) || 'NewsAPI',
+          tz: '+00:00',
+          lang: 'en',
+          ts: d.getTime(),
+        };
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
   async function translateText(text) {
     try {
       const res = await fetchJson(
@@ -1874,14 +1905,17 @@
     if (newsLoading) return;
     newsLoading = true;
     try {
-      const results = await Promise.allSettled(
-        NEWS_SOURCES.map((src) =>
-          fetchJson(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}`).then(
-            (data) => ({ src, data }),
+      const [results, newsApiItems] = await Promise.all([
+        Promise.allSettled(
+          NEWS_SOURCES.map((src) =>
+            fetchJson(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}`).then(
+              (data) => ({ src, data }),
+            ),
           ),
         ),
-      );
-      const merged = [];
+        loadNewsApiArticles(),
+      ]);
+      const merged = [...newsApiItems];
       results.forEach((r) => {
         if (r.status !== 'fulfilled' || !r.value.data || r.value.data.status !== 'ok') return;
         const { src, data } = r.value;
