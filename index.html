@@ -794,7 +794,7 @@
     display: flex;
     align-items: baseline;
     gap: 10px;
-    margin-bottom: 24px;
+    margin-bottom: 4px;
     flex: 0 0 auto;
   }
   .chart-price {
@@ -802,10 +802,18 @@
     font-weight: 800;
     font-variant-numeric: tabular-nums;
   }
+  .chart-price-secondary {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink-sub);
+    font-variant-numeric: tabular-nums;
+  }
   .chart-change {
+    margin-bottom: 20px;
     font-size: 15px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    flex: 0 0 auto;
   }
   .chart-change.up { color: var(--up); }
   .chart-change.down { color: var(--down); }
@@ -941,8 +949,9 @@
       </div>
       <div class="chart-price-row">
         <div class="chart-price" id="chartPrice">$0</div>
-        <div class="chart-change" id="chartChange">+0.00%</div>
+        <div class="chart-price-secondary" id="chartPriceSecondary"></div>
       </div>
+      <div class="chart-change" id="chartChange">+0.00%</div>
       <div class="chart-canvas-wrap">
         <canvas id="chartCanvas"></canvas>
         <div class="chart-loading" id="chartLoading">불러오는 중...</div>
@@ -1222,6 +1231,20 @@
     if (v >= 100) return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 2 });
     if (v >= 1) return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 4 });
     return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 6 });
+  }
+
+  // Formats the OTHER currency from the one currently toggled, for the small
+  // secondary price label next to the main chart price (e.g. main "19,455원",
+  // secondary "$14.31").
+  function formatSecondaryPrice(usdPrice) {
+    const n = Number(usdPrice);
+    if (currency === 'KRW') {
+      if (n >= 100) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+      if (n >= 1) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+      return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 6 });
+    }
+    if (!krwRate) return '';
+    return Math.round(n * krwRate).toLocaleString('ko-KR') + '원';
   }
 
   // Live-formats a number input as the user types: adds thousands commas and
@@ -1886,6 +1909,7 @@
   const chartSymbolEl = document.getElementById('chartSymbol');
   const chartSymbolKrEl = document.getElementById('chartSymbolKr');
   const chartPriceEl = document.getElementById('chartPrice');
+  const chartPriceSecondaryEl = document.getElementById('chartPriceSecondary');
   const chartChangeEl = document.getElementById('chartChange');
   const chartCanvas = document.getElementById('chartCanvas');
   const chartLoadingEl = document.getElementById('chartLoading');
@@ -1908,6 +1932,7 @@
   let currentRange = '1D';
   let chartCloses = [];
   let chartTimes = [];
+  let currentHoldingAvgPriceUsd = null;
   let scrubbing = false;
 
   function drawChart(closes, hoverIdx) {
@@ -1957,6 +1982,24 @@
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
+
+    if (currentHoldingAvgPriceUsd != null && currentHoldingAvgPriceUsd >= min && currentHoldingAvgPriceUsd <= max) {
+      const avgY = padTop + (1 - (currentHoldingAvgPriceUsd - min) / range) * usableH;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, avgY);
+      ctx.lineTo(w, avgY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textBaseline = avgY < padTop + 12 ? 'top' : 'bottom';
+      ctx.fillText('내 평균', 6, avgY < padTop + 12 ? avgY + 3 : avgY - 3);
+      ctx.restore();
+    }
 
     if (hoverIdx != null && points[hoverIdx]) {
       const [hx, hy] = points[hoverIdx];
@@ -2048,6 +2091,7 @@
       const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
       const sign = changePct > 0 ? '+' : '';
       chartPriceEl.textContent = formatPrice(last);
+      chartPriceSecondaryEl.textContent = formatSecondaryPrice(last);
       chartChangeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
       chartChangeEl.className = `chart-change ${cls}`;
       chartCloses = closes;
@@ -2072,6 +2116,8 @@
     const kr = krName(name, cat);
     chartSymbolKrEl.textContent = kr || '';
     chartSymbolKrEl.style.display = kr ? '' : 'none';
+    const holding = holdings.find((h) => h.symbol === symbol);
+    currentHoldingAvgPriceUsd = holding ? holding.avgPriceUsd : null;
     chartOverlay.classList.add('open');
     loadChart();
   }
@@ -2079,6 +2125,7 @@
   function closeChart() {
     chartOverlay.classList.remove('open');
     currentSymbol = null;
+    currentHoldingAvgPriceUsd = null;
   }
 
   listEl.addEventListener('click', (e) => {
