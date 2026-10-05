@@ -414,6 +414,9 @@
     border-radius: 14px;
     padding: 16px;
   }
+  .portfolio-card {
+    cursor: pointer;
+  }
   .portfolio-label {
     font-size: 14.5px;
     font-weight: 700;
@@ -793,6 +796,14 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+  }
+  .portfolio-detail-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
   .news-detail-meta {
     display: flex;
@@ -1180,6 +1191,43 @@
     </div>
   </div>
 
+  <div class="add-holding-page" id="portfolioDetailPage">
+    <div class="add-holding-inner">
+      <div class="add-holding-header">
+        <div class="title">Tickr</div>
+        <button type="button" class="chart-close" id="portfolioDetailClose" aria-label="닫기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="portfolio-detail-body" id="portfolioDetailBody"></div>
+    </div>
+  </div>
+
+  <div class="add-holding-page" id="addWatchlistPage">
+    <div class="add-holding-inner">
+      <div class="add-holding-header">
+        <div class="title">Tickr</div>
+        <button type="button" class="chart-close" id="addWatchlistClose" aria-label="닫기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="add-holding-search-row" id="addWatchlistSearchRow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" class="add-holding-search-input" id="addWatchlistSearchInput" placeholder="종목명 또는 티커 검색" />
+      </div>
+      <div class="add-holding-results" id="addWatchlistResults"></div>
+    </div>
+  </div>
+
   <div class="nav-footer">
     <div class="bottom-nav-bar" id="bottomNavBar">
       <div class="nav-highlight" id="navHighlight"></div>
@@ -1253,6 +1301,13 @@
   const newsDetailTitleEl = document.getElementById('newsDetailTitle');
   const newsDetailSummaryEl = document.getElementById('newsDetailSummary');
   const newsDetailOriginalEl = document.getElementById('newsDetailOriginal');
+  const portfolioDetailPageEl = document.getElementById('portfolioDetailPage');
+  const portfolioDetailClose = document.getElementById('portfolioDetailClose');
+  const portfolioDetailBodyEl = document.getElementById('portfolioDetailBody');
+  const addWatchlistPageEl = document.getElementById('addWatchlistPage');
+  const addWatchlistClose = document.getElementById('addWatchlistClose');
+  const addWatchlistSearchInput = document.getElementById('addWatchlistSearchInput');
+  const addWatchlistResultsEl = document.getElementById('addWatchlistResults');
 
   function moveNavHighlight(btn) {
     navHighlightEl.style.width = btn.offsetWidth + 'px';
@@ -1335,7 +1390,8 @@
   let fullTickers = [];
   let rawTickers = [];
   let symbolMeta = {};
-  let watchlistEditMode = false;
+  let portfolioEditMode = false;
+  let watchlistTabEditMode = false;
   let addHoldingSelected = null;
   let holdings = [];
   try {
@@ -1345,6 +1401,18 @@
   }
   function saveHoldings() {
     localStorage.setItem('tickr_holdings', JSON.stringify(holdings));
+  }
+
+  // 관심종목 is intentionally separate from holdings -- just symbols you want
+  // to keep an eye on, no quantity/avg price, independent of 내 투자.
+  let watchlist = [];
+  try {
+    watchlist = JSON.parse(localStorage.getItem('tickr_watchlist') || '[]');
+  } catch (e) {
+    watchlist = [];
+  }
+  function saveWatchlist() {
+    localStorage.setItem('tickr_watchlist', JSON.stringify(watchlist));
   }
 
   function formatPrice(p) {
@@ -1472,29 +1540,50 @@
     listEl.innerHTML = renderRows(tickers);
   }
 
-  function renderWatchlistRows(tickers) {
-    return tickers
-      .map((t, i) => {
-        const holding = holdings.find((h) => h.symbol === t.symbol);
-        const cat = holding ? holding.cat : 'domestic';
-        const changeNum = Number(t.priceChangePercent);
-        const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
-        const sign = changeNum > 0 ? '+' : '';
-        const name = displayName(t.symbol);
-        const kr = krName(name, cat);
-        return `
-          <div class="row" data-symbol="${t.symbol}" data-cat="${cat}">
-            <div class="rank">${i + 1}</div>
-            <div class="coin">
-              <div class="coin-symbol">${name}</div>
-              ${kr ? `<div class="coin-vol">${kr}</div>` : ''}
-            </div>
-            <div class="price">${formatPrice(t.lastPrice)}</div>
-            <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
+  function watchlistCardHtml(symbol, cat, editMode, footerHtml) {
+    const t = findTicker(symbol);
+    if (!t) return '';
+    const changeNum = Number(t.priceChangePercent);
+    const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
+    const sign = changeNum > 0 ? '+' : '';
+    const name = displayName(symbol);
+    const kr = krName(name, cat);
+    return `
+      <div class="watchlist-item" data-symbol="${symbol}" data-cat="${cat}">
+        <div class="watchlist-item-top">
+          <div class="watchlist-symbol">
+            <div class="watchlist-symbol-name">${name}</div>
+            ${kr ? `<div class="watchlist-symbol-kr">${kr}</div>` : ''}
           </div>
-        `;
-      })
-      .join('');
+          ${editMode ? `<button type="button" class="watchlist-remove-btn" data-remove="${symbol}">×</button>` : ''}
+        </div>
+        <canvas class="watchlist-sparkline" data-sparkline="${symbol}"></canvas>
+        <div class="watchlist-price">${formatPrice(t.lastPrice)}</div>
+        <div class="watchlist-change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
+        ${footerHtml || ''}
+      </div>
+    `;
+  }
+
+  function renderWatchlistTab() {
+    const headerHtml = `
+      <div class="home-section-header">
+        <div class="add-holding-link" id="watchlistAddLink">+ 종목 추가</div>
+        ${watchlist.length ? `<div class="home-edit-link" id="watchlistTabEditLink">${watchlistTabEditMode ? '완료' : '편집'}</div>` : ''}
+      </div>
+    `;
+    const present = watchlist.filter((w) => findTicker(w.symbol));
+    if (!present.length) {
+      listEl.innerHTML = headerHtml + '<div class="empty">담은 종목이 없어요.</div>';
+      return;
+    }
+    const gridHtml = `
+      <div class="watchlist-grid">
+        ${present.map((w) => watchlistCardHtml(w.symbol, w.cat, watchlistTabEditMode)).join('')}
+      </div>
+    `;
+    listEl.innerHTML = headerHtml + gridHtml;
+    loadSparklines();
   }
 
   function renderCurrent() {
@@ -1507,12 +1596,7 @@
       return;
     }
     if (mode === 'watchlist') {
-      const items = fullTickers.filter((t) => holdings.some((h) => h.symbol === t.symbol));
-      items.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
-      rawTickers = items;
-      listEl.innerHTML = items.length
-        ? renderWatchlistRows(items)
-        : '<div class="empty">담은 종목이 없어요. 홈에서 종목을 담아보세요.</div>';
+      renderWatchlistTab();
       return;
     }
     const filtered = fullTickers.filter(categoryFilter);
@@ -1575,8 +1659,8 @@
     ctx.stroke();
   }
 
-  async function loadSparklines() {
-    const canvases = listEl.querySelectorAll('[data-sparkline]');
+  async function loadSparklines(root) {
+    const canvases = (root || listEl).querySelectorAll('[data-sparkline]');
     await Promise.all(
       [...canvases].map(async (canvas) => {
         const symbol = canvas.dataset.sparkline;
@@ -1601,7 +1685,7 @@
     const pnlSign = totalPnlNative > 0 ? '+' : totalPnlNative < 0 ? '-' : '';
 
     const portfolioHtml = `
-      <div class="home-card">
+      <div class="home-card portfolio-card" id="portfolioCard">
         <div class="portfolio-label">내 투자</div>
         <div class="portfolio-total">${formatNativeAmount(totalValueNative)}</div>
         ${
@@ -1612,42 +1696,6 @@
         <div class="add-holding-link" id="addHoldingLink">+ 종목 담기</div>
       </div>
     `;
-
-    const watchlistHtml = holdings.length
-      ? `
-      <div>
-        <div class="home-section-header">
-          <div class="home-section-title">관심 종목</div>
-          <div class="home-edit-link" id="watchlistEditLink">${watchlistEditMode ? '완료' : '편집'}</div>
-        </div>
-        <div class="watchlist-grid">
-          ${stats
-            .map(({ h, s }) => {
-              const name = displayName(h.symbol);
-              const kr = krName(name, h.cat);
-              const cls = s.changePct > 0 ? 'up' : s.changePct < 0 ? 'down' : '';
-              const sign = s.changePct > 0 ? '+' : '';
-              return `
-                <div class="watchlist-item" data-symbol="${h.symbol}" data-cat="${h.cat}">
-                  <div class="watchlist-item-top">
-                    <div class="watchlist-symbol">
-                      <div class="watchlist-symbol-name">${name}</div>
-                      ${kr ? `<div class="watchlist-symbol-kr">${kr}</div>` : ''}
-                    </div>
-                    ${watchlistEditMode ? `<button type="button" class="watchlist-remove-btn" data-remove="${h.symbol}">×</button>` : ''}
-                  </div>
-                  <canvas class="watchlist-sparkline" data-sparkline="${h.symbol}"></canvas>
-                  <div class="watchlist-price">${formatPrice(s.lastPrice)}</div>
-                  <div class="watchlist-change ${cls}">${sign}${s.changePct.toFixed(2)}%</div>
-                  <div class="watchlist-qty">보유 ${h.qty}</div>
-                </div>
-              `;
-            })
-            .join('')}
-        </div>
-      </div>
-    `
-      : '';
 
     const clTicker = findTicker('CLUSDT');
     const clChangePct = clTicker ? Number(clTicker.priceChangePercent) : 0;
@@ -1735,8 +1783,59 @@
       </div>
     `;
 
-    listEl.innerHTML = portfolioHtml + watchlistHtml + indicatorsHtml + fearGreedHtml;
-    if (holdings.length) loadSparklines();
+    listEl.innerHTML = portfolioHtml + indicatorsHtml + fearGreedHtml;
+  }
+
+  function renderPortfolioDetail() {
+    const stats = holdings.map((h) => ({ h, s: holdingStats(h) }));
+    const totalValueNative = stats.reduce((sum, { s }) => sum + s.valueNative, 0);
+    const totalCostNative = stats.reduce((sum, { s }) => sum + s.costNative, 0);
+    const totalPnlNative = totalValueNative - totalCostNative;
+    const totalPnlPct = totalCostNative ? (totalPnlNative / totalCostNative) * 100 : 0;
+    const pnlCls = totalPnlNative > 0 ? 'up' : totalPnlNative < 0 ? 'down' : '';
+    const pnlSign = totalPnlNative > 0 ? '+' : totalPnlNative < 0 ? '-' : '';
+
+    const summaryHtml = `
+      <div class="home-card">
+        <div class="portfolio-label">총 평가금</div>
+        <div class="portfolio-total">${formatNativeAmount(totalValueNative)}</div>
+        ${
+          holdings.length
+            ? `<div class="portfolio-pnl ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(totalPnlNative))} (${pnlSign}${Math.abs(totalPnlPct).toFixed(2)}%)</div>`
+            : ''
+        }
+        <div class="add-holding-link" id="portfolioAddLink">+ 종목 담기</div>
+      </div>
+    `;
+
+    const listHtml = holdings.length
+      ? `
+      <div>
+        <div class="home-section-header">
+          <div class="home-section-title">보유 종목</div>
+          <div class="home-edit-link" id="portfolioEditLink">${portfolioEditMode ? '완료' : '편집'}</div>
+        </div>
+        <div class="watchlist-grid">
+          ${stats
+            .map(({ h }) => watchlistCardHtml(h.symbol, h.cat, portfolioEditMode, `<div class="watchlist-qty">보유 ${h.qty}</div>`))
+            .join('')}
+        </div>
+      </div>
+    `
+      : '<div class="empty">담은 종목이 없어요.</div>';
+
+    portfolioDetailBodyEl.innerHTML = summaryHtml + listHtml;
+    if (holdings.length) loadSparklines(portfolioDetailBodyEl);
+  }
+
+  function openPortfolioDetail() {
+    portfolioEditMode = false;
+    renderPortfolioDetail();
+    portfolioDetailPageEl.classList.add('open');
+  }
+
+  function closePortfolioDetail() {
+    portfolioDetailPageEl.classList.remove('open');
   }
 
   // rss2json passes each feed's pubDate through without converting timezones,
@@ -1961,6 +2060,40 @@
       : '<div class="empty">검색 결과가 없습니다</div>';
   }
 
+  function openAddWatchlist() {
+    addWatchlistSearchInput.value = '';
+    addWatchlistResultsEl.innerHTML = '';
+    addWatchlistPageEl.classList.add('open');
+    addWatchlistSearchInput.focus();
+  }
+
+  function closeAddWatchlist() {
+    addWatchlistPageEl.classList.remove('open');
+  }
+
+  function renderAddWatchlistResults(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      addWatchlistResultsEl.innerHTML = '';
+      return;
+    }
+    const savedMode = mode;
+    const matches = [];
+    ALL_CATEGORIES.forEach((cat) => {
+      mode = cat;
+      fullTickers.filter(categoryFilter).forEach((t) => {
+        const name = displayName(t.symbol).toLowerCase();
+        const kr = (krName(displayName(t.symbol)) || '').toLowerCase();
+        if (name.includes(q) || kr.includes(q)) matches.push({ t, cat });
+      });
+    });
+    mode = savedMode;
+    matches.sort((a, b) => Number(b.t.quoteVolume) - Number(a.t.quoteVolume));
+    addWatchlistResultsEl.innerHTML = matches.length
+      ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
+      : '<div class="empty">검색 결과가 없습니다</div>';
+  }
+
   function selectAddHoldingSymbol(symbol, cat) {
     addHoldingSelected = { symbol, cat };
     const name = displayName(symbol);
@@ -2113,7 +2246,7 @@
     searchIconBtn.style.display = hideTabs ? 'none' : '';
     if (hideTabs) closeSearch();
     modeTabsEl.style.display = hideTabs ? 'none' : '';
-    listEl.classList.toggle('home-view', hideTabs);
+    listEl.classList.toggle('home-view', hideTabs || mode === 'watchlist');
   }
 
   function setMode(next) {
@@ -2427,16 +2560,24 @@
       openAddHolding();
       return;
     }
-    if (e.target.closest('#watchlistEditLink')) {
-      watchlistEditMode = !watchlistEditMode;
-      renderHome();
+    if (e.target.closest('#portfolioCard')) {
+      openPortfolioDetail();
+      return;
+    }
+    if (e.target.closest('#watchlistAddLink')) {
+      openAddWatchlist();
+      return;
+    }
+    if (e.target.closest('#watchlistTabEditLink')) {
+      watchlistTabEditMode = !watchlistTabEditMode;
+      renderWatchlistTab();
       return;
     }
     const removeBtn = e.target.closest('.watchlist-remove-btn');
     if (removeBtn) {
-      holdings = holdings.filter((h) => h.symbol !== removeBtn.dataset.remove);
-      saveHoldings();
-      renderHome();
+      watchlist = watchlist.filter((w) => w.symbol !== removeBtn.dataset.remove);
+      saveWatchlist();
+      renderWatchlistTab();
       return;
     }
     const watchItem = e.target.closest('.watchlist-item');
@@ -2451,6 +2592,30 @@
     }
     const row = e.target.closest('.row');
     if (row) openChart(row.dataset.symbol, row.dataset.cat);
+  });
+
+  portfolioDetailBodyEl.addEventListener('click', (e) => {
+    if (e.target.closest('#portfolioAddLink')) {
+      openAddHolding();
+      return;
+    }
+    if (e.target.closest('#portfolioEditLink')) {
+      portfolioEditMode = !portfolioEditMode;
+      renderPortfolioDetail();
+      return;
+    }
+    const removeBtn = e.target.closest('.watchlist-remove-btn');
+    if (removeBtn) {
+      holdings = holdings.filter((h) => h.symbol !== removeBtn.dataset.remove);
+      saveHoldings();
+      renderPortfolioDetail();
+      return;
+    }
+    const item = e.target.closest('.watchlist-item');
+    if (item) {
+      closePortfolioDetail();
+      openChart(item.dataset.symbol, item.dataset.cat);
+    }
   });
 
   newsDetailClose.addEventListener('click', closeNewsDetail);
@@ -2499,6 +2664,32 @@
   addHoldingPageEl.addEventListener('click', (e) => {
     if (e.target === addHoldingPageEl) closeAddHolding();
   });
+
+  portfolioDetailClose.addEventListener('click', closePortfolioDetail);
+  portfolioDetailPageEl.addEventListener('click', (e) => {
+    if (e.target === portfolioDetailPageEl) closePortfolioDetail();
+  });
+
+  addWatchlistSearchInput.addEventListener('input', () => {
+    renderAddWatchlistResults(addWatchlistSearchInput.value);
+  });
+  addWatchlistResultsEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.row');
+    if (!row) return;
+    const symbol = row.dataset.symbol;
+    const cat = row.dataset.cat;
+    if (!watchlist.some((w) => w.symbol === symbol)) {
+      watchlist.push({ symbol, cat });
+      saveWatchlist();
+    }
+    closeAddWatchlist();
+    if (mode === 'watchlist') renderWatchlistTab();
+  });
+  addWatchlistClose.addEventListener('click', closeAddWatchlist);
+  addWatchlistPageEl.addEventListener('click', (e) => {
+    if (e.target === addWatchlistPageEl) closeAddWatchlist();
+  });
+
   chartClose.addEventListener('click', closeChart);
   chartOverlay.addEventListener('click', (e) => {
     if (e.target === chartOverlay) closeChart();
