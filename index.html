@@ -2361,7 +2361,7 @@
     '3M': { interval: '1d', limit: 90 },
     '1Y': { interval: '1d', limit: 365 },
     '5Y': { interval: '1w', limit: 260 },
-    ALL: { interval: '1M', limit: 1000 },
+    ALL: { interval: '1w', limit: 420 },
   };
   const INTERVAL_MS = {
     '15m': 15 * 60 * 1000,
@@ -2371,7 +2371,61 @@
     '1M': 30 * 24 * 60 * 60 * 1000,
   };
 
+  // Regular trading-session hours per category, in the exchange's own local time.
+  // Crypto has no entry -- it trades 24/7, so the 1D chart keeps its plain rolling window.
+  const MARKET_HOURS = {
+    domestic: { tz: 'Asia/Seoul', openMin: 9 * 60, closeMin: 15 * 60 + 30 },
+    us: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60 },
+    leverage: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60 },
+    index: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60 },
+  };
+
+  // How far "local wall-clock time in tz" is ahead of UTC, in minutes, at the given instant
+  // (handles DST automatically since it's derived from Intl at that exact instant).
+  function tzOffsetMinutes(date, tz) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(date).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
+    const asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+    return (asUtc - date.getTime()) / 60000;
+  }
+
+  // Resolves the most recent regular session for `cat` relative to `now`: today's
+  // session (in progress or just-closed) if today is a trading day and we're past
+  // open, otherwise the previous weekday's full session. No holiday calendar --
+  // holidays will incorrectly read as a trading day, which is an accepted gap.
+  function getRegularSession(cat, now) {
+    const cfg = MARKET_HOURS[cat];
+    if (!cfg) return null;
+    const offsetMin = tzOffsetMinutes(now, cfg.tz);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: cfg.tz, hourCycle: 'h23', weekday: 'short',
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).formatToParts(now).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
+    const y = +parts.year, m = +parts.month, d = +parts.day;
+    const weekdayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
+
+    const localToUtc = (minutesOfDay, dayOffset) =>
+      Date.UTC(y, m - 1, d, 0, 0, 0) + minutesOfDay * 60000 - offsetMin * 60000 - dayOffset * 86400000;
+
+    let dayOffset = weekdayIdx === 0 ? 2 : weekdayIdx === 6 ? 1 : 0; // roll weekends back to Friday
+    let sessionOpen = localToUtc(cfg.openMin, dayOffset);
+    let sessionClose = localToUtc(cfg.closeMin, dayOffset);
+
+    if (dayOffset === 0 && now.getTime() < sessionOpen) {
+      // Weekday, but before today's open -- the last completed session is the prior weekday.
+      dayOffset = weekdayIdx === 1 ? 3 : 1; // Monday before open rolls back to Friday
+      sessionOpen = localToUtc(cfg.openMin, dayOffset);
+      sessionClose = localToUtc(cfg.closeMin, dayOffset);
+    }
+
+    return { start: sessionOpen, end: Math.max(Math.min(now.getTime(), sessionClose), sessionOpen + 60000) };
+  }
+
   let currentSymbol = null;
+  let currentCat = null;
   let currentRange = '1D';
   let chartCloses = [];
   let chartTimes = [];
@@ -2515,10 +2569,12 @@
     chartLoadingEl.style.display = 'flex';
     chartScrubLabelEl.style.display = 'none';
     const { interval, limit } = RANGES[currentRange];
+    const session = currentRange === '1D' ? getRegularSession(currentCat, new Date()) : null;
+    const url = session
+      ? `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&startTime=${session.start}&endTime=${session.end}&limit=1500`
+      : `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`;
     try {
-      const klines = await fetchJson(
-        `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`,
-      );
+      const klines = await fetchJson(url);
       let closes = klines.map((k) => Number(k[4]));
       let times = klines.map((k) => Number(k[0]));
       const first = closes[0];
@@ -2535,8 +2591,10 @@
       // ETF on a 5Y chart) get fewer candles back than `limit` -- pad the front
       // with the listing price so the time axis still spans the full range
       // instead of the real data stretching to fill the whole chart width.
+      // Skipped for session-anchored 1D fetches: a session simply in progress
+      // (not yet at close) isn't the same thing as the symbol being too new.
       let realStartIdx = 0;
-      if (currentRange !== 'ALL' && closes.length < limit && closes.length > 0) {
+      if (!session && closes.length < limit && closes.length > 0) {
         const padCount = limit - closes.length;
         const stepMs = INTERVAL_MS[interval] || 0;
         const padClosesArr = new Array(padCount).fill(closes[0]);
@@ -2560,6 +2618,7 @@
 
   function openChart(symbol, cat) {
     currentSymbol = symbol;
+    currentCat = cat;
     currentRange = '1D';
     chartRangesEl.querySelectorAll('.chart-range-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.range === currentRange);
@@ -2576,6 +2635,7 @@
   function closeChart() {
     chartOverlay.classList.remove('open');
     currentSymbol = null;
+    currentCat = null;
   }
 
   listEl.addEventListener('click', (e) => {
