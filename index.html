@@ -600,8 +600,7 @@
     display: block;
     padding: 12px 0;
     border-bottom: 1px solid var(--line);
-    text-decoration: none;
-    color: inherit;
+    cursor: pointer;
   }
   .news-item:last-child {
     border-bottom: none;
@@ -760,6 +759,82 @@
   .add-holding-submit:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+
+  /* ---------- News detail overlay ---------- */
+  .news-detail-page {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: var(--bg);
+    display: none;
+    justify-content: center;
+    padding: calc(18px + env(safe-area-inset-top)) 0 calc(20px + var(--safe-bottom));
+  }
+  .news-detail-page.open {
+    display: flex;
+  }
+  .news-detail-inner {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .news-detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex: 0 0 auto;
+  }
+  .news-detail-body-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .news-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .news-detail-source {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .news-detail-time {
+    font-size: 12px;
+    color: var(--ink-sub);
+  }
+  .news-detail-title {
+    margin-top: 10px;
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+  .news-detail-summary {
+    margin-top: 16px;
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: var(--ink);
+    white-space: pre-wrap;
+  }
+  .news-detail-original {
+    display: block;
+    flex: 0 0 auto;
+    margin-top: 16px;
+    height: 50px;
+    line-height: 50px;
+    text-align: center;
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 14.5px;
+    font-weight: 700;
   }
 
   .chart-overlay {
@@ -937,6 +1012,7 @@
       </div>
       <div class="mode-tabs-wrap">
         <div class="mode-tabs" id="modeTabs">
+          <button type="button" class="mode-tab" data-mode="watchlist">관심종목</button>
           <button type="button" class="mode-tab active" data-mode="domestic">국내주식</button>
           <button type="button" class="mode-tab" data-mode="us">미국주식</button>
           <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
@@ -1081,6 +1157,29 @@
     </div>
   </div>
 
+  <div class="news-detail-page" id="newsDetailPage">
+    <div class="news-detail-inner">
+      <div class="news-detail-header">
+        <div class="title">Tickr</div>
+        <button type="button" class="chart-close" id="newsDetailClose" aria-label="닫기">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="news-detail-body-wrap">
+        <div class="news-detail-meta">
+          <span class="news-detail-source" id="newsDetailSource"></span>
+          <span class="news-detail-time" id="newsDetailTime"></span>
+        </div>
+        <div class="news-detail-title" id="newsDetailTitle"></div>
+        <div class="news-detail-summary" id="newsDetailSummary"></div>
+      </div>
+      <a class="news-detail-original" id="newsDetailOriginal" href="#" target="_blank" rel="noopener noreferrer">원본 보기</a>
+    </div>
+  </div>
+
   <div class="nav-footer">
     <div class="bottom-nav-bar" id="bottomNavBar">
       <div class="nav-highlight" id="navHighlight"></div>
@@ -1147,6 +1246,13 @@
   const addHoldingAvgPriceKrwInput = document.getElementById('addHoldingAvgPriceKrw');
   const addHoldingAvgPriceUsdInput = document.getElementById('addHoldingAvgPriceUsd');
   const addHoldingSubmitBtn = document.getElementById('addHoldingSubmit');
+  const newsDetailPageEl = document.getElementById('newsDetailPage');
+  const newsDetailClose = document.getElementById('newsDetailClose');
+  const newsDetailSourceEl = document.getElementById('newsDetailSource');
+  const newsDetailTimeEl = document.getElementById('newsDetailTime');
+  const newsDetailTitleEl = document.getElementById('newsDetailTitle');
+  const newsDetailSummaryEl = document.getElementById('newsDetailSummary');
+  const newsDetailOriginalEl = document.getElementById('newsDetailOriginal');
 
   function moveNavHighlight(btn) {
     navHighlightEl.style.width = btn.offsetWidth + 'px';
@@ -1366,6 +1472,31 @@
     listEl.innerHTML = renderRows(tickers);
   }
 
+  function renderWatchlistRows(tickers) {
+    return tickers
+      .map((t, i) => {
+        const holding = holdings.find((h) => h.symbol === t.symbol);
+        const cat = holding ? holding.cat : 'domestic';
+        const changeNum = Number(t.priceChangePercent);
+        const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
+        const sign = changeNum > 0 ? '+' : '';
+        const name = displayName(t.symbol);
+        const kr = krName(name, cat);
+        return `
+          <div class="row" data-symbol="${t.symbol}" data-cat="${cat}">
+            <div class="rank">${i + 1}</div>
+            <div class="coin">
+              <div class="coin-symbol">${name}</div>
+              ${kr ? `<div class="coin-vol">${kr}</div>` : ''}
+            </div>
+            <div class="price">${formatPrice(t.lastPrice)}</div>
+            <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
   function renderCurrent() {
     if (view === 'home') {
       renderHome();
@@ -1373,6 +1504,15 @@
     }
     if (view === 'news') {
       renderNews();
+      return;
+    }
+    if (mode === 'watchlist') {
+      const items = fullTickers.filter((t) => holdings.some((h) => h.symbol === t.symbol));
+      items.sort((a, b) => Number(b.quoteVolume) - Number(a.quoteVolume));
+      rawTickers = items;
+      listEl.innerHTML = items.length
+        ? renderWatchlistRows(items)
+        : '<div class="empty">담은 종목이 없어요. 홈에서 종목을 담아보세요.</div>';
       return;
     }
     const filtered = fullTickers.filter(categoryFilter);
@@ -1655,6 +1795,7 @@
             title: item.title,
             link: item.link,
             pubDate: item.pubDate,
+            summary: (item.description || item.content || '').replace(/<[^>]+>/g, '').trim(),
             sourceName: src.name,
             tz: src.tz,
             lang: src.lang,
@@ -1694,12 +1835,12 @@
         <div class="news-list">
           ${newsItems
             .map(
-              (item) => `
-                <a class="news-item" href="${item.link}" target="_blank" rel="noopener noreferrer">
+              (item, i) => `
+                <div class="news-item" data-index="${i}">
                   <div class="news-source">${item.sourceName}</div>
                   <div class="news-title">${item.title}</div>
                   <div class="news-time">${timeAgo(item.pubDate, item.tz)}</div>
-                </a>
+                </div>
               `,
             )
             .join('')}
@@ -1707,6 +1848,31 @@
       </div>
     `;
     listEl.innerHTML = newsHtml;
+  }
+
+  async function openNewsDetail(index) {
+    const item = newsItems && newsItems[index];
+    if (!item) return;
+    newsDetailSourceEl.textContent = item.sourceName;
+    newsDetailTimeEl.textContent = timeAgo(item.pubDate, item.tz);
+    newsDetailTitleEl.textContent = item.title;
+    newsDetailOriginalEl.href = item.link;
+    newsDetailPageEl.classList.add('open');
+
+    if (!item.summary) {
+      newsDetailSummaryEl.textContent = '요약 정보가 없어요. 원본에서 확인해주세요.';
+      return;
+    }
+    if (item.lang === 'en') {
+      newsDetailSummaryEl.textContent = '번역 중...';
+      newsDetailSummaryEl.textContent = await translateText(item.summary);
+    } else {
+      newsDetailSummaryEl.textContent = item.summary;
+    }
+  }
+
+  function closeNewsDetail() {
+    newsDetailPageEl.classList.remove('open');
   }
 
   function renderSearchRow(t, cat) {
@@ -2278,8 +2444,18 @@
       openChart(watchItem.dataset.symbol, watchItem.dataset.cat);
       return;
     }
+    const newsItem = e.target.closest('.news-item');
+    if (newsItem) {
+      openNewsDetail(Number(newsItem.dataset.index));
+      return;
+    }
     const row = e.target.closest('.row');
     if (row) openChart(row.dataset.symbol, row.dataset.cat);
+  });
+
+  newsDetailClose.addEventListener('click', closeNewsDetail);
+  newsDetailPageEl.addEventListener('click', (e) => {
+    if (e.target === newsDetailPageEl) closeNewsDetail();
   });
   searchPageListEl.addEventListener('click', (e) => {
     const row = e.target.closest('.row');
