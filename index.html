@@ -1849,7 +1849,7 @@
 
   async function loadNewsApiArticles() {
     try {
-      const data = await fetchJson(`${YAHOO_PROXY}news?category=business&country=us&pageSize=50`);
+      const data = await fetchJson(`${YAHOO_PROXY}news?category=business&country=us&pageSize=100`);
       if (data.status !== 'ok') return [];
       return data.articles
         .filter((a) => a.source && NEWS_SOURCE_WHITELIST.has(a.source.id))
