@@ -901,6 +901,7 @@
     display: none;
     justify-content: center;
     padding: calc(18px + env(safe-area-inset-top)) 0 calc(20px + var(--safe-bottom));
+    overflow-y: auto;
   }
   .chart-overlay.open {
     display: flex;
@@ -1048,6 +1049,10 @@
     margin-top: 20px;
     flex: 0 0 auto;
   }
+  .chart-my-holding-section {
+    margin-top: 24px;
+    flex: 0 0 auto;
+  }
   .chart-range-btn {
     flex: 1;
     min-width: 0;
@@ -1153,6 +1158,10 @@
         <button type="button" class="chart-range-btn" data-range="5Y">5년</button>
         <button type="button" class="chart-range-btn" data-range="ALL">전체</button>
       </div>
+      <div class="chart-my-holding-section" id="chartMyHoldingSection" hidden>
+        <div class="home-section-title">내 주식</div>
+        <div class="list" id="chartMyHoldingList"></div>
+      </div>
     </div>
   </div>
 
@@ -1178,7 +1187,7 @@
           <circle cx="11" cy="11" r="7" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <input type="text" class="search-page-input" id="searchInput" placeholder="검색어를 입력하세요" />
+        <input type="text" class="search-page-input" id="searchInput" placeholder="종목명 또는 티커 검색" />
         <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="지우기" hidden>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -2472,7 +2481,10 @@
       });
     });
     renderCurrent();
-    if (currentSymbol) loadChart();
+    if (currentSymbol) {
+      loadChart();
+      updateChartMyHolding();
+    }
     if (searchOpen) performGlobalSearch(searchInputEl.value);
     if (portfolioDetailPageEl.classList.contains('open')) renderPortfolioDetail();
   }
@@ -2508,6 +2520,8 @@
   const chartCanvas = document.getElementById('chartCanvas');
   const chartLoadingEl = document.getElementById('chartLoading');
   const chartRangesEl = document.getElementById('chartRanges');
+  const chartMyHoldingSectionEl = document.getElementById('chartMyHoldingSection');
+  const chartMyHoldingListEl = document.getElementById('chartMyHoldingList');
   const chartScrubLabelEl = document.getElementById('chartScrubLabel');
   const scrubDateEl = document.getElementById('scrubDate');
   const scrubPriceEl = document.getElementById('scrubPrice');
@@ -2950,7 +2964,18 @@
     chartSymbolKrEl.style.display = kr ? '' : 'none';
     chartOverlay.classList.add('open');
     updateChartHeart();
+    updateChartMyHolding();
     loadChart();
+  }
+
+  function updateChartMyHolding() {
+    const h = holdings.find((x) => x.symbol === currentSymbol);
+    if (!h) {
+      chartMyHoldingSectionEl.hidden = true;
+      return;
+    }
+    chartMyHoldingListEl.innerHTML = holdingRowHtml(h, holdingStats(h), false);
+    chartMyHoldingSectionEl.hidden = false;
   }
 
   function closeChart() {
