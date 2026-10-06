@@ -1837,12 +1837,12 @@
   let newsItems = null;
   let newsLoading = false;
 
-  // AP via NewsAPI, proxied through the same Cloudflare Worker used for Yahoo --
+  // Reuters/Bloomberg/AP via NewsAPI, proxied through the same Cloudflare Worker used for Yahoo --
   // NewsAPI's free tier only allows requests from localhost, and routing it
   // server-side also keeps the API key out of this public repo.
   async function loadNewsApiArticles() {
     try {
-      const data = await fetchJson(`${YAHOO_PROXY}news?sources=associated-press`);
+      const data = await fetchJson(`${YAHOO_PROXY}news?sources=reuters,bloomberg,associated-press`);
       if (data.status !== 'ok') return [];
       return data.articles.map((a) => {
         // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending
