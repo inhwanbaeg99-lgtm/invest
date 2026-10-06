@@ -2859,11 +2859,40 @@
     try {
       fullTickers = await fetchJson(`${FAPI}/ticker/24hr`);
       renderCurrent();
+      tickOverlayPrices();
       touchUpdatedAt();
     } catch (e) {
       if (!rawTickers.length) {
         listEl.innerHTML = '<div class="empty">시세를 불러오지 못했습니다</div>';
       }
+    }
+  }
+
+  // renderCurrent() only covers the home/news/watchlist/list tab -- any
+  // stacked overlay page showing a price (chart, DCA, portfolio detail,
+  // add-holding, search) needs its own refresh here so prices keep ticking
+  // no matter what's open on top. Every branch reuses the fullTickers data
+  // that just landed above, so none of this costs an extra network call.
+  function tickOverlayPrices() {
+    if (chartOverlay.classList.contains('open')) {
+      updateChartHeaderPrice();
+      updateChartMyHolding();
+    }
+    if (portfolioDetailPageEl.classList.contains('open')) {
+      renderPortfolioDetail();
+    }
+    if (dcaPageEl.classList.contains('open')) {
+      renderDcaPage();
+    }
+    if (addHoldingPageEl.classList.contains('open')) {
+      if (addHoldingSelected) refreshAddHoldingHeaderPrice();
+      else renderAddHoldingResults(addHoldingSearchInput.value);
+    }
+    if (addWatchlistPageEl.classList.contains('open')) {
+      renderAddWatchlistResults(addWatchlistSearchInput.value);
+    }
+    if (searchPageEl.classList.contains('open')) {
+      performGlobalSearch(searchInputEl.value);
     }
   }
 
@@ -3511,6 +3540,22 @@
     updateChartHeart();
     updateChartMyHolding();
     loadChart();
+  }
+
+  // Cheap per-tick price refresh for the chart header -- reuses the already-
+  // fetched fullTickers data (no network call) so the number can keep ticking
+  // every second without re-fetching klines or redrawing the chart line.
+  function updateChartHeaderPrice() {
+    const t = findTicker(currentSymbol);
+    if (!t || chartRefValue == null) return;
+    const last = Number(t.lastPrice);
+    const changePct = ((last - chartRefValue) / chartRefValue) * 100;
+    const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
+    const sign = changePct > 0 ? '+' : '';
+    chartPriceEl.textContent = formatPrice(last);
+    chartPriceSecondaryEl.textContent = formatSecondaryPrice(last);
+    chartChangeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
+    chartChangeEl.className = `chart-change ${cls}`;
   }
 
   function updateChartMyHolding() {
