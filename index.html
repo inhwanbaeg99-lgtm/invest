@@ -504,74 +504,81 @@
     justify-content: center;
     cursor: pointer;
   }
-  .holding-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .holding-card {
-    position: relative;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px;
+  .holding-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
     cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .holding-row:last-child {
+    border-bottom: none;
+  }
+  .holding-row:hover {
+    background: #1a1d22;
   }
   .holding-remove-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
     border: none;
     border-radius: 999px;
     background: var(--down);
     color: #fff;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
   }
-  .holding-card-name {
+  .holding-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .holding-name {
     font-size: 15px;
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .holding-card-qty {
+  .holding-sub {
     margin-top: 2px;
     font-size: 12px;
     color: var(--ink-sub);
   }
-  .holding-card-value {
-    margin-top: 10px;
+  .holding-right {
+    flex: 0 0 auto;
+    text-align: right;
+  }
+  .holding-value {
     font-size: 15px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .holding-card-pnl {
+  .holding-pnl {
     margin-top: 2px;
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .holding-card-pnl.up { color: var(--up); }
-  .holding-card-pnl.down { color: var(--down); }
-  .holding-add-card {
+  .holding-pnl.up { color: var(--up); }
+  .holding-pnl.down { color: var(--down); }
+  .holding-add-row {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 92px;
-    border-style: dashed;
+    padding: 14px 16px;
     color: var(--ink-sub);
+    cursor: pointer;
   }
-  .holding-add-plus {
-    font-size: 30px;
+  .holding-add-row-plus {
+    font-size: 20px;
     font-weight: 400;
     line-height: 1;
   }
@@ -1953,19 +1960,23 @@
     listEl.innerHTML = portfolioHtml + indicatorsHtml + fearGreedHtml;
   }
 
-  function holdingCardHtml(h, s, editMode) {
+  function holdingRowHtml(h, s, editMode) {
     const t = findTicker(h.symbol);
     if (!t) return '';
     const name = displayName(h.symbol);
     const pnlCls = s.pnlNative > 0 ? 'up' : s.pnlNative < 0 ? 'down' : '';
     const pnlSign = s.pnlNative > 0 ? '+' : s.pnlNative < 0 ? '-' : '';
     return `
-      <div class="holding-card" data-symbol="${h.symbol}" data-cat="${h.cat}">
+      <div class="holding-row" data-symbol="${h.symbol}" data-cat="${h.cat}">
         ${editMode ? `<button type="button" class="holding-remove-btn" data-remove="${h.symbol}">×</button>` : ''}
-        <div class="holding-card-name">${name}</div>
-        <div class="holding-card-qty">${h.qty.toLocaleString('ko-KR')}주</div>
-        <div class="holding-card-value">${formatNativeAmount(s.valueNative)}</div>
-        <div class="holding-card-pnl ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(s.pnlNative))} (${pnlSign}${Math.abs(s.pnlPct).toFixed(1)}%)</div>
+        <div class="holding-info">
+          <div class="holding-name">${name}</div>
+          <div class="holding-sub">${h.qty.toLocaleString('ko-KR')}주</div>
+        </div>
+        <div class="holding-right">
+          <div class="holding-value">${formatNativeAmount(s.valueNative)}</div>
+          <div class="holding-pnl ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(s.pnlNative))} (${pnlSign}${Math.abs(s.pnlPct).toFixed(1)}%)</div>
+        </div>
       </div>
     `;
   }
@@ -1991,15 +2002,15 @@
       </div>
     `;
 
-    const cardsHtml = stats.map(({ h, s }) => holdingCardHtml(h, s, portfolioEditMode)).join('');
-    const addTileHtml = `<div class="holding-card holding-add-card" id="portfolioAddLink"><span class="holding-add-plus">+</span></div>`;
+    const rowsHtml = stats.map(({ h, s }) => holdingRowHtml(h, s, portfolioEditMode)).join('');
+    const addRowHtml = `<div class="holding-add-row" id="portfolioAddLink"><span class="holding-add-row-plus">+</span></div>`;
     const listHtml = `
       <div>
         <div class="home-section-header">
           <div class="home-section-title">보유 종목</div>
           ${holdings.length ? `<div class="home-edit-link" id="portfolioEditLink">${portfolioEditMode ? '완료' : '편집'}</div>` : ''}
         </div>
-        <div class="holding-grid">${cardsHtml}${addTileHtml}</div>
+        <div class="list">${rowsHtml}${addRowHtml}</div>
       </div>
     `;
 
@@ -3149,7 +3160,7 @@
       renderPortfolioDetail();
       return;
     }
-    const item = e.target.closest('.holding-card');
+    const item = e.target.closest('.holding-row');
     if (item) {
       closePortfolioDetail();
       openChart(item.dataset.symbol, item.dataset.cat);
