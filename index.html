@@ -639,6 +639,29 @@
     display: flex;
     flex-direction: column;
   }
+  .news-subtabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .news-subtab-btn {
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    color: var(--ink-sub);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .news-subtab-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #04201d;
+  }
   .news-item {
     display: block;
     padding: 12px 0;
@@ -2312,71 +2335,22 @@
     portfolioDetailPageEl.classList.remove('open');
   }
 
-  let newsItems = null;
-  let newsLoading = false;
+  // 해외뉴스 상태 (PR Newswire만) / 한국뉴스 상태 (DART 공시 + 네이버 금융 키워드 검색) --
+  // 둘을 따로 로드/표시하므로 완전히 분리된 state 쌍으로 관리.
+  let newsSubTab = 'kr'; // 'kr' | 'global'
+  let newsItemsKr = null;
+  let newsItemsGlobal = null;
+  let newsLoadingKr = false;
+  let newsLoadingGlobal = false;
 
-  // Reuters/Bloomberg/AP via NewsAPI, proxied through the same Cloudflare Worker used for Yahoo --
-  // NewsAPI's free tier only allows requests from localhost, and routing it
-  // server-side also keeps the API key out of this public repo.
-  // NewsAPI rejects combining `sources` with `category`, and AP/BBC/CNN/Washington
-  // Post don't have dedicated business-only source ids the way Bloomberg/WSJ do --
-  // so pull NewsAPI's own business-tagged headlines and keep only these 6 outlets.
-  const NEWS_SOURCE_WHITELIST = new Set([
-    'associated-press', 'bloomberg', 'the-wall-street-journal', 'bbc-news', 'cnn', 'the-washington-post',
-  ]);
-
-  // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending on
-  // the upstream source, which breaks timeAgo()'s RSS-style string surgery
-  // either way -- round-trip through Date and re-serialize in the same
-  // space-separated, offset-less format the RSS/Atom feeds below also use.
-  function toRssStyleUtc(d) {
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
-  }
-
-  async function loadNewsApiArticles() {
-    try {
-      const data = await fetchJson(`${YAHOO_PROXY}news?category=business&country=us&pageSize=100`);
-      if (data.status !== 'ok') return [];
-      return data.articles
-        .filter((a) => a.source && NEWS_SOURCE_WHITELIST.has(a.source.id))
-        .map((a) => {
-          const d = new Date(a.publishedAt);
-          return {
-            title: a.title,
-            link: a.url,
-            pubDate: toRssStyleUtc(d),
-            summary: (a.description || a.content || '').replace(/\[\+\d+ chars\]$/, '').trim(),
-            sourceName: a.source.name,
-            tz: '+00:00',
-            lang: 'en',
-            ts: d.getTime(),
-          };
-        });
-    } catch (e) {
-      return [];
-    }
-  }
-
-  // PR Newswire / GlobeNewswire (company press releases) and SEC EDGAR (real-time
-  // 8-K filings -- material events, earnings, M&A) -- the primary-source "C tier"
-  // that often breaks before any journalist writes about it. Proxied through the
-  // worker's /rss route (CORS + SEC's required identifying User-Agent).
+  // PR Newswire (company press releases) -- the primary-source "wire" feed
+  // that often breaks before any journalist writes about it. Proxied through
+  // the worker's /rss route (CORS).
   const FEED_SOURCES = [
     {
       name: 'PR Newswire',
       url: 'https://www.prnewswire.com/rss/financial-services-latest-news/financial-services-latest-news-list.rss',
       format: 'rss',
-    },
-    {
-      name: 'GlobeNewswire',
-      url: 'https://www.globenewswire.com/RssFeed/subjectcode/5-Press%20Releases/feedTitle/GlobeNewswire%20-%20Press%20Releases',
-      format: 'rss',
-    },
-    {
-      name: 'SEC EDGAR',
-      url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=include&count=40&output=atom',
-      format: 'atom',
     },
   ];
 
@@ -2411,16 +2385,13 @@
       return parseFeedXml(xml, src.format)
         .slice(0, 10)
         .map((it) => {
-          const d = new Date(it.dateStr);
           return {
             title: it.title,
             link: it.link,
-            pubDate: toRssStyleUtc(d),
             summary: it.summary,
             sourceName: src.name,
-            tz: '+00:00',
             lang: 'en',
-            ts: d.getTime(),
+            ts: new Date(it.dateStr).getTime(),
           };
         });
     } catch (e) {
@@ -2439,8 +2410,8 @@
     }
   }
 
-  function timeAgo(dateStr, tz) {
-    const diffMs = Date.now() - new Date(dateStr.replace(' ', 'T') + (tz || '+09:00')).getTime();
+  function timeAgo(ts) {
+    const diffMs = Date.now() - ts;
     const mins = Math.floor(diffMs / 60000);
     if (mins < 1) return '방금 전';
     if (mins < 60) return `${mins}분 전`;
@@ -2449,15 +2420,106 @@
     return `${Math.floor(hours / 24)}일 전`;
   }
 
-  async function loadNews() {
-    if (newsLoading) return;
-    newsLoading = true;
+  // OpenDART 공시검색 -- 상장사 정기/주요사항 공시는 성격상 전부 금융 관련이라
+  // 별도 키워드 필터링이 필요 없다. 최근 7일치를 최신순으로.
+  async function loadDartDisclosures() {
     try {
-      const [newsApiItems, ...feedResults] = await Promise.all([
-        loadNewsApiArticles(),
-        ...FEED_SOURCES.map(loadFeedArticles),
-      ]);
-      const merged = [...newsApiItems, ...feedResults.flat()];
+      const fmt = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const end = new Date();
+      const begin = new Date(end);
+      begin.setDate(begin.getDate() - 7);
+      const data = await fetchJson(
+        `${YAHOO_PROXY}dart?bgn_de=${fmt(begin)}&end_de=${fmt(end)}&page_count=50`,
+      );
+      if (data.status !== '000' || !data.list) return [];
+      return data.list.map((it) => {
+        const y = it.rcept_dt.slice(0, 4);
+        const m = it.rcept_dt.slice(4, 6);
+        const d = it.rcept_dt.slice(6, 8);
+        return {
+          title: `[${it.corp_name}] ${it.report_nm}`,
+          link: `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${it.rcept_no}`,
+          summary: '',
+          sourceName: 'DART 공시',
+          lang: 'ko',
+          ts: new Date(`${y}-${m}-${d}T09:00:00+09:00`).getTime(),
+        };
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function stripNaverMarkup(s) {
+    return (s || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#39;/g, "'");
+  }
+
+  // 네이버 뉴스 검색 API는 카테고리 필터가 없는 순수 키워드 검색이라, 경제/금융
+  // 키워드 여러 개로 나눠 호출한 뒤 링크 기준으로 합쳐서 "경제 뉴스"를 근사한다.
+  const NAVER_FINANCE_QUERIES = ['증시', '코스피', '코스닥', '금리', '환율', '경제'];
+
+  async function loadNaverFinanceNews() {
+    try {
+      const results = await Promise.all(
+        NAVER_FINANCE_QUERIES.map((q) =>
+          fetchJson(`${YAHOO_PROXY}navernews?query=${encodeURIComponent(q)}&display=20&sort=date`).catch(
+            () => null,
+          ),
+        ),
+      );
+      const seen = new Set();
+      const items = [];
+      for (const data of results) {
+        if (!data || !data.items) continue;
+        for (const it of data.items) {
+          if (seen.has(it.link)) continue;
+          seen.add(it.link);
+          items.push({
+            title: stripNaverMarkup(it.title),
+            link: it.link,
+            summary: stripNaverMarkup(it.description),
+            sourceName: '네이버뉴스',
+            lang: 'ko',
+            ts: new Date(it.pubDate).getTime(),
+          });
+        }
+      }
+      return items;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function loadNewsKr() {
+    if (newsLoadingKr) return;
+    newsLoadingKr = true;
+    try {
+      const [dartItems, naverItems] = await Promise.all([loadDartDisclosures(), loadNaverFinanceNews()]);
+      const merged = [...dartItems, ...naverItems];
+      if (merged.length) {
+        merged.sort((a, b) => b.ts - a.ts);
+        newsItemsKr = merged.slice(0, 50);
+        if (view === 'news' && newsSubTab === 'kr') renderNews();
+      }
+    } catch (e) {
+      // keep previous items on failure
+    } finally {
+      newsLoadingKr = false;
+    }
+  }
+
+  async function loadNewsGlobal() {
+    if (newsLoadingGlobal) return;
+    newsLoadingGlobal = true;
+    try {
+      const feedResults = await Promise.all(FEED_SOURCES.map(loadFeedArticles));
+      const merged = feedResults.flat();
       if (merged.length) {
         merged.sort((a, b) => b.ts - a.ts);
         const top = merged.slice(0, 50);
@@ -2466,13 +2528,13 @@
             item.title = await translateText(item.title);
           }),
         );
-        newsItems = top;
-        if (view === 'news') renderNews();
+        newsItemsGlobal = top;
+        if (view === 'news' && newsSubTab === 'global') renderNews();
       }
     } catch (e) {
       // keep previous items on failure
     } finally {
-      newsLoading = false;
+      newsLoadingGlobal = false;
     }
   }
 
@@ -2481,22 +2543,30 @@
       listEl.innerHTML = `<div class="home-card">${loginGateHtml('로그인하면 뉴스를 볼 수 있어요')}</div>`;
       return;
     }
-    if (!newsItems) {
-      listEl.innerHTML = '<div class="empty">뉴스를 불러오는 중...</div>';
-      loadNews();
+    const tabsHtml = `
+      <div class="news-subtabs">
+        <button type="button" class="news-subtab-btn ${newsSubTab === 'kr' ? 'active' : ''}" data-subtab="kr">한국뉴스</button>
+        <button type="button" class="news-subtab-btn ${newsSubTab === 'global' ? 'active' : ''}" data-subtab="global">해외뉴스</button>
+      </div>
+    `;
+    const items = newsSubTab === 'kr' ? newsItemsKr : newsItemsGlobal;
+    if (!items) {
+      listEl.innerHTML = `${tabsHtml}<div class="empty">뉴스를 불러오는 중...</div>`;
+      if (newsSubTab === 'kr') loadNewsKr();
+      else loadNewsGlobal();
       return;
     }
     const newsHtml = `
       <div class="home-card">
         <div class="portfolio-label">뉴스</div>
         <div class="news-list">
-          ${newsItems
+          ${items
             .map(
               (item, i) => `
                 <div class="news-item" data-index="${i}">
                   <div class="news-source">${item.sourceName}</div>
                   <div class="news-title">${item.title}</div>
-                  <div class="news-time">${timeAgo(item.pubDate, item.tz)}</div>
+                  <div class="news-time">${timeAgo(item.ts)}</div>
                 </div>
               `,
             )
@@ -2504,14 +2574,15 @@
         </div>
       </div>
     `;
-    listEl.innerHTML = newsHtml;
+    listEl.innerHTML = tabsHtml + newsHtml;
   }
 
   async function openNewsDetail(index) {
-    const item = newsItems && newsItems[index];
+    const items = newsSubTab === 'kr' ? newsItemsKr : newsItemsGlobal;
+    const item = items && items[index];
     if (!item) return;
     newsDetailSourceEl.textContent = item.sourceName;
-    newsDetailTimeEl.textContent = timeAgo(item.pubDate, item.tz);
+    newsDetailTimeEl.textContent = timeAgo(item.ts);
     newsDetailTitleEl.textContent = item.title;
     newsDetailOriginalEl.href = item.link;
     newsDetailPageEl.classList.add('open');
@@ -3877,6 +3948,15 @@
       saveWatchlist();
       if (!watchlist.length) watchlistTabEditMode = false;
       renderWatchlistTab();
+      return;
+    }
+    const newsSubtabBtn = e.target.closest('.news-subtab-btn');
+    if (newsSubtabBtn) {
+      const next = newsSubtabBtn.dataset.subtab;
+      if (next !== newsSubTab) {
+        newsSubTab = next;
+        renderNews();
+      }
       return;
     }
     const newsItem = e.target.closest('.news-item');
