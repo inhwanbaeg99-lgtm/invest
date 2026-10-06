@@ -202,6 +202,11 @@
   .mode-tabs::-webkit-scrollbar {
     display: none;
   }
+  @media (min-width: 768px) {
+    .mode-tabs {
+      justify-content: center;
+    }
+  }
   .tabs-fade {
     position: absolute;
     top: 0;
@@ -465,15 +470,6 @@
     font-size: 16px;
     font-weight: 800;
   }
-  .watchlist-group-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ink-sub);
-    margin: 16px 4px 8px;
-  }
-  .watchlist-group-title:first-child {
-    margin-top: 0;
-  }
   .home-edit-link {
     font-size: 16px;
     font-weight: 700;
@@ -734,51 +730,6 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-  }
-  .group-picker-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 120;
-    background: rgba(0, 0, 0, 0.6);
-    display: none;
-    align-items: flex-end;
-    justify-content: center;
-  }
-  .group-picker-overlay.open {
-    display: flex;
-  }
-  .group-picker-sheet {
-    width: 100%;
-    max-width: 720px;
-    background: var(--panel);
-    border-radius: 16px 16px 0 0;
-    padding: 20px 16px calc(20px + var(--safe-bottom));
-  }
-  .group-picker-title {
-    font-size: 15px;
-    font-weight: 800;
-    margin-bottom: 10px;
-    text-align: center;
-  }
-  .group-picker-item {
-    padding: 14px 8px;
-    text-align: center;
-    font-size: 15px;
-    font-weight: 700;
-    border-top: 1px solid var(--line);
-    cursor: pointer;
-  }
-  .group-picker-item:first-child {
-    border-top: none;
-  }
-  .group-picker-cancel {
-    margin-top: 14px;
-    padding: 14px 8px;
-    text-align: center;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--ink-sub);
-    cursor: pointer;
   }
   .add-holding-form {
     margin-top: 16px;
@@ -1350,13 +1301,6 @@
     </div>
   </div>
 
-  <div class="group-picker-overlay" id="groupPickerOverlay">
-    <div class="group-picker-sheet">
-      <div class="group-picker-title">어느 그룹에 추가할까요?</div>
-      <div id="groupPickerList"></div>
-      <div class="group-picker-cancel" id="groupPickerCancel">취소</div>
-    </div>
-  </div>
 
   <div class="nav-footer">
     <div class="bottom-nav-bar" id="bottomNavBar">
@@ -1438,9 +1382,6 @@
   const addWatchlistClose = document.getElementById('addWatchlistClose');
   const addWatchlistSearchInput = document.getElementById('addWatchlistSearchInput');
   const addWatchlistResultsEl = document.getElementById('addWatchlistResults');
-  const groupPickerOverlayEl = document.getElementById('groupPickerOverlay');
-  const groupPickerListEl = document.getElementById('groupPickerList');
-  const groupPickerCancelEl = document.getElementById('groupPickerCancel');
 
   function moveNavHighlight(btn) {
     navHighlightEl.style.width = btn.offsetWidth + 'px';
@@ -1551,47 +1492,14 @@
     localStorage.setItem('tickr_watchlist', JSON.stringify(watchlist));
   }
 
-  let watchlistGroups = [];
-  try {
-    watchlistGroups = JSON.parse(localStorage.getItem('tickr_watchlist_groups') || '[]');
-  } catch (e) {
-    watchlistGroups = [];
-  }
-  function saveWatchlistGroups() {
-    localStorage.setItem('tickr_watchlist_groups', JSON.stringify(watchlistGroups));
-  }
-
-  // Adds `symbol` to the watchlist, routing through the group picker when
-  // groups exist so the user can choose where it lands. No-ops if it's
-  // already saved (shared by the heart button and the search-and-add flow).
+  // Adds `symbol` to the watchlist. No-ops if it's already saved (shared by
+  // the heart button and the search-and-add flow).
   function addToWatchlist(symbol, cat) {
     if (watchlist.some((w) => w.symbol === symbol)) return;
-    if (watchlistGroups.length) {
-      openGroupPicker(symbol, cat);
-      return;
-    }
-    watchlist.push({ symbol, cat, groupId: null });
+    watchlist.push({ symbol, cat });
     saveWatchlist();
     updateChartHeart();
     if (mode === 'watchlist') renderWatchlistTab();
-  }
-
-  let groupPickerSymbol = null;
-  let groupPickerCat = null;
-
-  function openGroupPicker(symbol, cat) {
-    groupPickerSymbol = symbol;
-    groupPickerCat = cat;
-    groupPickerListEl.innerHTML =
-      watchlistGroups.map((g) => `<div class="group-picker-item" data-group="${g.id}">${g.name}</div>`).join('') +
-      `<div class="group-picker-item" data-group="">그룹 없음</div>`;
-    groupPickerOverlayEl.classList.add('open');
-  }
-
-  function closeGroupPicker() {
-    groupPickerOverlayEl.classList.remove('open');
-    groupPickerSymbol = null;
-    groupPickerCat = null;
   }
 
   function formatPrice(p) {
@@ -1742,7 +1650,7 @@
   function renderWatchlistTab() {
     const headerHtml = `
       <div class="home-section-header">
-        <div class="home-edit-link" id="watchlistAddGroupLink">그룹추가</div>
+        <div class="home-section-title">관심종목</div>
         ${watchlist.length ? `<div class="home-edit-link" id="watchlistTabEditLink">${watchlistTabEditMode ? '완료' : '편집'}</div>` : ''}
       </div>
     `;
@@ -1753,36 +1661,7 @@
       return;
     }
 
-    let bodyHtml;
-    if (watchlistGroups.length) {
-      const byGroup = {};
-      const ungrouped = [];
-      present.forEach((w) => {
-        if (w.groupId && watchlistGroups.some((g) => g.id === w.groupId)) {
-          (byGroup[w.groupId] = byGroup[w.groupId] || []).push(w);
-        } else {
-          ungrouped.push(w);
-        }
-      });
-      const groupSections = watchlistGroups
-        .map((g) => {
-          const items = byGroup[g.id] || [];
-          if (!items.length) return '';
-          return `
-            <div class="watchlist-group-title">${g.name}</div>
-            <div class="list">${items.map((w, i) => watchlistRowHtml(w, i)).join('')}</div>
-          `;
-        })
-        .join('');
-      const ungroupedTitleHtml = ungrouped.length ? '<div class="watchlist-group-title">미분류</div>' : '';
-      const ungroupedHtml = `
-          ${ungroupedTitleHtml}
-          <div class="list">${ungrouped.map((w, i) => watchlistRowHtml(w, i)).join('')}${addRowHtml}</div>
-        `;
-      bodyHtml = groupSections + ungroupedHtml;
-    } else {
-      bodyHtml = `<div class="list">${present.map((w, i) => watchlistRowHtml(w, i)).join('')}${addRowHtml}</div>`;
-    }
+    const bodyHtml = `<div class="list">${present.map((w, i) => watchlistRowHtml(w, i)).join('')}${addRowHtml}</div>`;
 
     listEl.innerHTML = headerHtml + bodyHtml;
 
@@ -1997,7 +1876,7 @@
     const listHtml = `
       <div>
         <div class="home-section-header">
-          <div class="home-section-title">보유 종목</div>
+          <div class="home-section-title"></div>
           ${holdings.length ? `<div class="home-edit-link" id="portfolioEditLink">${portfolioEditMode ? '완료' : '편집'}</div>` : ''}
         </div>
         <div class="list">${rowsHtml}${addRowHtml}</div>
@@ -3103,15 +2982,6 @@
       openAddWatchlist();
       return;
     }
-    if (e.target.closest('#watchlistAddGroupLink')) {
-      const name = (prompt('그룹 이름을 입력하세요') || '').trim();
-      if (name) {
-        watchlistGroups.push({ id: `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name });
-        saveWatchlistGroups();
-        renderWatchlistTab();
-      }
-      return;
-    }
     if (e.target.closest('#watchlistTabEditLink')) {
       watchlistTabEditMode = !watchlistTabEditMode;
       renderWatchlistTab();
@@ -3222,23 +3092,6 @@
   addWatchlistClose.addEventListener('click', closeAddWatchlist);
   addWatchlistPageEl.addEventListener('click', (e) => {
     if (e.target === addWatchlistPageEl) closeAddWatchlist();
-  });
-
-  groupPickerListEl.addEventListener('click', (e) => {
-    const item = e.target.closest('.group-picker-item');
-    if (!item || !groupPickerSymbol) return;
-    const groupId = item.dataset.group || null;
-    if (!watchlist.some((w) => w.symbol === groupPickerSymbol)) {
-      watchlist.push({ symbol: groupPickerSymbol, cat: groupPickerCat, groupId });
-      saveWatchlist();
-    }
-    closeGroupPicker();
-    updateChartHeart();
-    if (mode === 'watchlist') renderWatchlistTab();
-  });
-  groupPickerCancelEl.addEventListener('click', closeGroupPicker);
-  groupPickerOverlayEl.addEventListener('click', (e) => {
-    if (e.target === groupPickerOverlayEl) closeGroupPicker();
   });
 
   chartClose.addEventListener('click', closeChart);
