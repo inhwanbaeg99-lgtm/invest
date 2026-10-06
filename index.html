@@ -454,15 +454,6 @@
     color: var(--ink);
     cursor: pointer;
   }
-  .add-holding-link-centered {
-    display: block;
-    margin-top: 16px;
-    text-align: center;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--ink);
-    cursor: pointer;
-  }
   .home-section-header {
     display: flex;
     align-items: center;
@@ -578,18 +569,9 @@
     cursor: pointer;
   }
   .holding-add-row-plus {
-    width: 30px;
-    height: 30px;
-    border-radius: 999px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    color: var(--ink);
-    font-size: 17px;
+    font-size: 20px;
     font-weight: 400;
     line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
   .indicators-table {
     display: grid;
@@ -1764,10 +1746,10 @@
         ${watchlist.length ? `<div class="home-edit-link" id="watchlistTabEditLink">${watchlistTabEditMode ? '완료' : '편집'}</div>` : ''}
       </div>
     `;
-    const addLinkHtml = `<div class="add-holding-link-centered" id="watchlistAddLink">종목추가</div>`;
+    const addRowHtml = '<div class="holding-add-row" id="watchlistAddLink"><span class="holding-add-row-plus">+</span></div>';
     const present = watchlist.filter((w) => findTicker(w.symbol));
     if (!present.length) {
-      listEl.innerHTML = headerHtml + '<div class="empty">담은 종목이 없어요.</div>' + addLinkHtml;
+      listEl.innerHTML = headerHtml + '<div class="empty">담은 종목이 없어요.</div>' + `<div class="list">${addRowHtml}</div>`;
       return;
     }
 
@@ -1792,18 +1774,17 @@
           `;
         })
         .join('');
-      const ungroupedHtml = ungrouped.length
-        ? `
-          <div class="watchlist-group-title">미분류</div>
-          <div class="list">${ungrouped.map((w, i) => watchlistRowHtml(w, i)).join('')}</div>
-        `
-        : '';
+      const ungroupedTitleHtml = ungrouped.length ? '<div class="watchlist-group-title">미분류</div>' : '';
+      const ungroupedHtml = `
+          ${ungroupedTitleHtml}
+          <div class="list">${ungrouped.map((w, i) => watchlistRowHtml(w, i)).join('')}${addRowHtml}</div>
+        `;
       bodyHtml = groupSections + ungroupedHtml;
     } else {
-      bodyHtml = `<div class="list">${present.map((w, i) => watchlistRowHtml(w, i)).join('')}</div>`;
+      bodyHtml = `<div class="list">${present.map((w, i) => watchlistRowHtml(w, i)).join('')}${addRowHtml}</div>`;
     }
 
-    listEl.innerHTML = headerHtml + bodyHtml + addLinkHtml;
+    listEl.innerHTML = headerHtml + bodyHtml;
 
     const byCat = {};
     present.forEach((w) => {
