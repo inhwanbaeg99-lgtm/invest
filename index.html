@@ -474,6 +474,15 @@
     font-size: 16px;
     font-weight: 800;
   }
+  .watchlist-group-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-sub);
+    margin: 16px 4px 8px;
+  }
+  .watchlist-group-title:first-child {
+    margin-top: 0;
+  }
   .home-edit-link {
     font-size: 16px;
     font-weight: 700;
@@ -716,6 +725,51 @@
     min-height: 0;
     overflow-y: auto;
   }
+  .group-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .group-picker-overlay.open {
+    display: flex;
+  }
+  .group-picker-sheet {
+    width: 100%;
+    max-width: 720px;
+    background: var(--panel);
+    border-radius: 16px 16px 0 0;
+    padding: 20px 16px calc(20px + var(--safe-bottom));
+  }
+  .group-picker-title {
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .group-picker-item {
+    padding: 14px 8px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    border-top: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .group-picker-item:first-child {
+    border-top: none;
+  }
+  .group-picker-cancel {
+    margin-top: 14px;
+    padding: 14px 8px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink-sub);
+    cursor: pointer;
+  }
   .add-holding-form {
     margin-top: 16px;
     flex: 0 0 auto;
@@ -905,6 +959,26 @@
     margin-bottom: 20px;
     flex: 0 0 auto;
   }
+  .chart-heart-btn {
+    margin-left: auto;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--ink-sub);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .chart-heart-btn.active {
+    color: var(--down);
+  }
+  .chart-heart-btn.active svg {
+    fill: var(--down);
+  }
   .chart-symbol {
     font-size: 20px;
     font-weight: 800;
@@ -1086,6 +1160,11 @@
           <div class="chart-symbol" id="chartSymbol">BTC</div>
           <div class="chart-symbol-kr" id="chartSymbolKr"></div>
         </div>
+        <button type="button" class="chart-heart-btn" id="chartHeartBtn" aria-label="관심종목">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s-6.7-4.3-9.3-8.7C.9 9 1.8 5.2 5 3.8c2.3-1 4.7 0 7 2.7 2.3-2.7 4.7-3.7 7-2.7 3.2 1.4 4.1 5.2 2.3 8.5C18.7 16.7 12 21 12 21z" />
+          </svg>
+        </button>
       </div>
       <div class="chart-price-row">
         <div class="chart-price" id="chartPrice">$0</div>
@@ -1261,6 +1340,14 @@
     </div>
   </div>
 
+  <div class="group-picker-overlay" id="groupPickerOverlay">
+    <div class="group-picker-sheet">
+      <div class="group-picker-title">어느 그룹에 추가할까요?</div>
+      <div id="groupPickerList"></div>
+      <div class="group-picker-cancel" id="groupPickerCancel">취소</div>
+    </div>
+  </div>
+
   <div class="nav-footer">
     <div class="bottom-nav-bar" id="bottomNavBar">
       <div class="nav-highlight" id="navHighlight"></div>
@@ -1341,6 +1428,9 @@
   const addWatchlistClose = document.getElementById('addWatchlistClose');
   const addWatchlistSearchInput = document.getElementById('addWatchlistSearchInput');
   const addWatchlistResultsEl = document.getElementById('addWatchlistResults');
+  const groupPickerOverlayEl = document.getElementById('groupPickerOverlay');
+  const groupPickerListEl = document.getElementById('groupPickerList');
+  const groupPickerCancelEl = document.getElementById('groupPickerCancel');
 
   function moveNavHighlight(btn) {
     navHighlightEl.style.width = btn.offsetWidth + 'px';
@@ -1449,6 +1539,49 @@
   }
   function saveWatchlist() {
     localStorage.setItem('tickr_watchlist', JSON.stringify(watchlist));
+  }
+
+  let watchlistGroups = [];
+  try {
+    watchlistGroups = JSON.parse(localStorage.getItem('tickr_watchlist_groups') || '[]');
+  } catch (e) {
+    watchlistGroups = [];
+  }
+  function saveWatchlistGroups() {
+    localStorage.setItem('tickr_watchlist_groups', JSON.stringify(watchlistGroups));
+  }
+
+  // Adds `symbol` to the watchlist, routing through the group picker when
+  // groups exist so the user can choose where it lands. No-ops if it's
+  // already saved (shared by the heart button and the search-and-add flow).
+  function addToWatchlist(symbol, cat) {
+    if (watchlist.some((w) => w.symbol === symbol)) return;
+    if (watchlistGroups.length) {
+      openGroupPicker(symbol, cat);
+      return;
+    }
+    watchlist.push({ symbol, cat, groupId: null });
+    saveWatchlist();
+    updateChartHeart();
+    if (mode === 'watchlist') renderWatchlistTab();
+  }
+
+  let groupPickerSymbol = null;
+  let groupPickerCat = null;
+
+  function openGroupPicker(symbol, cat) {
+    groupPickerSymbol = symbol;
+    groupPickerCat = cat;
+    groupPickerListEl.innerHTML =
+      watchlistGroups.map((g) => `<div class="group-picker-item" data-group="${g.id}">${g.name}</div>`).join('') +
+      `<div class="group-picker-item" data-group="">그룹 없음</div>`;
+    groupPickerOverlayEl.classList.add('open');
+  }
+
+  function closeGroupPicker() {
+    groupPickerOverlayEl.classList.remove('open');
+    groupPickerSymbol = null;
+    groupPickerCat = null;
   }
 
   function formatPrice(p) {
@@ -1576,40 +1709,73 @@
     listEl.innerHTML = renderRows(tickers);
   }
 
+  function watchlistRowHtml(w, i) {
+    const t = findTicker(w.symbol);
+    const changeNum = sessionAnchoredChangePct(w.symbol, w.cat, Number(t.lastPrice), Number(t.priceChangePercent));
+    const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
+    const sign = changeNum > 0 ? '+' : '';
+    const name = displayName(w.symbol);
+    const kr = krName(name, w.cat);
+    return `
+      <div class="row" data-symbol="${w.symbol}" data-cat="${w.cat}">
+        <div class="rank">${watchlistTabEditMode ? `<button type="button" class="watchlist-remove-btn" data-remove="${w.symbol}">×</button>` : i + 1}</div>
+        <div class="coin">
+          <div class="coin-symbol">${name}</div>
+          ${kr ? `<div class="coin-vol">${kr}</div>` : ''}
+        </div>
+        <div class="price">${formatPrice(t.lastPrice)}</div>
+        <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
+      </div>
+    `;
+  }
+
   function renderWatchlistTab() {
     const headerHtml = `
       <div class="home-section-header">
-        <div class="add-holding-link" id="watchlistAddLink">+ 종목 추가</div>
+        <div class="home-edit-link" id="watchlistAddGroupLink">그룹추가</div>
         ${watchlist.length ? `<div class="home-edit-link" id="watchlistTabEditLink">${watchlistTabEditMode ? '완료' : '편집'}</div>` : ''}
       </div>
     `;
+    const addLinkHtml = `<div class="add-holding-link-centered" id="watchlistAddLink">종목추가</div>`;
     const present = watchlist.filter((w) => findTicker(w.symbol));
     if (!present.length) {
-      listEl.innerHTML = headerHtml + '<div class="empty">담은 종목이 없어요.</div>';
+      listEl.innerHTML = headerHtml + '<div class="empty">담은 종목이 없어요.</div>' + addLinkHtml;
       return;
     }
-    const rowsHtml = present
-      .map((w, i) => {
-        const t = findTicker(w.symbol);
-        const changeNum = sessionAnchoredChangePct(w.symbol, w.cat, Number(t.lastPrice), Number(t.priceChangePercent));
-        const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
-        const sign = changeNum > 0 ? '+' : '';
-        const name = displayName(w.symbol);
-        const kr = krName(name, w.cat);
-        return `
-          <div class="row" data-symbol="${w.symbol}" data-cat="${w.cat}">
-            <div class="rank">${watchlistTabEditMode ? `<button type="button" class="watchlist-remove-btn" data-remove="${w.symbol}">×</button>` : i + 1}</div>
-            <div class="coin">
-              <div class="coin-symbol">${name}</div>
-              ${kr ? `<div class="coin-vol">${kr}</div>` : ''}
-            </div>
-            <div class="price">${formatPrice(t.lastPrice)}</div>
-            <div class="change ${cls}">${sign}${changeNum.toFixed(2)}%</div>
-          </div>
-        `;
-      })
-      .join('');
-    listEl.innerHTML = headerHtml + `<div class="list">${rowsHtml}</div>`;
+
+    let bodyHtml;
+    if (watchlistGroups.length) {
+      const byGroup = {};
+      const ungrouped = [];
+      present.forEach((w) => {
+        if (w.groupId && watchlistGroups.some((g) => g.id === w.groupId)) {
+          (byGroup[w.groupId] = byGroup[w.groupId] || []).push(w);
+        } else {
+          ungrouped.push(w);
+        }
+      });
+      const groupSections = watchlistGroups
+        .map((g) => {
+          const items = byGroup[g.id] || [];
+          if (!items.length) return '';
+          return `
+            <div class="watchlist-group-title">${g.name}</div>
+            <div class="list">${items.map((w, i) => watchlistRowHtml(w, i)).join('')}</div>
+          `;
+        })
+        .join('');
+      const ungroupedHtml = ungrouped.length
+        ? `
+          <div class="watchlist-group-title">미분류</div>
+          <div class="list">${ungrouped.map((w, i) => watchlistRowHtml(w, i)).join('')}</div>
+        `
+        : '';
+      bodyHtml = groupSections + ungroupedHtml;
+    } else {
+      bodyHtml = `<div class="list">${present.map((w, i) => watchlistRowHtml(w, i)).join('')}</div>`;
+    }
+
+    listEl.innerHTML = headerHtml + bodyHtml + addLinkHtml;
 
     const byCat = {};
     present.forEach((w) => {
@@ -1831,7 +1997,7 @@
       </div>
     `
       : '<div class="empty">담은 종목이 없어요.</div>';
-    const addLinkHtml = `<div class="add-holding-link-centered" id="portfolioAddLink">+ 종목 담기</div>`;
+    const addLinkHtml = `<div class="add-holding-link-centered" id="portfolioAddLink">종목추가</div>`;
 
     portfolioDetailBodyEl.innerHTML = summaryHtml + listHtml + addLinkHtml;
   }
@@ -2446,6 +2612,7 @@
   const chartClose = document.getElementById('chartClose');
   const chartSymbolEl = document.getElementById('chartSymbol');
   const chartSymbolKrEl = document.getElementById('chartSymbolKr');
+  const chartHeartBtn = document.getElementById('chartHeartBtn');
   const chartPriceEl = document.getElementById('chartPrice');
   const chartPriceSecondaryEl = document.getElementById('chartPriceSecondary');
   const chartChangeEl = document.getElementById('chartChange');
@@ -2893,6 +3060,7 @@
     chartSymbolKrEl.textContent = kr || '';
     chartSymbolKrEl.style.display = kr ? '' : 'none';
     chartOverlay.classList.add('open');
+    updateChartHeart();
     loadChart();
   }
 
@@ -2902,6 +3070,25 @@
     currentCat = null;
   }
 
+  function updateChartHeart() {
+    const inWatchlist = currentSymbol != null && watchlist.some((w) => w.symbol === currentSymbol);
+    chartHeartBtn.classList.toggle('active', inWatchlist);
+  }
+
+  chartHeartBtn.addEventListener('click', () => {
+    if (!currentSymbol) return;
+    const idx = watchlist.findIndex((w) => w.symbol === currentSymbol);
+    if (idx >= 0) {
+      watchlist.splice(idx, 1);
+      saveWatchlist();
+      updateChartHeart();
+      if (mode === 'watchlist') renderWatchlistTab();
+      return;
+    }
+    addToWatchlist(currentSymbol, currentCat);
+    updateChartHeart();
+  });
+
   listEl.addEventListener('click', (e) => {
     if (e.target.closest('#portfolioCard')) {
       openPortfolioDetail();
@@ -2909,6 +3096,15 @@
     }
     if (e.target.closest('#watchlistAddLink')) {
       openAddWatchlist();
+      return;
+    }
+    if (e.target.closest('#watchlistAddGroupLink')) {
+      const name = (prompt('그룹 이름을 입력하세요') || '').trim();
+      if (name) {
+        watchlistGroups.push({ id: `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name });
+        saveWatchlistGroups();
+        renderWatchlistTab();
+      }
       return;
     }
     if (e.target.closest('#watchlistTabEditLink')) {
@@ -3015,18 +3211,29 @@
   addWatchlistResultsEl.addEventListener('click', (e) => {
     const row = e.target.closest('.row');
     if (!row) return;
-    const symbol = row.dataset.symbol;
-    const cat = row.dataset.cat;
-    if (!watchlist.some((w) => w.symbol === symbol)) {
-      watchlist.push({ symbol, cat });
-      saveWatchlist();
-    }
     closeAddWatchlist();
-    if (mode === 'watchlist') renderWatchlistTab();
+    addToWatchlist(row.dataset.symbol, row.dataset.cat);
   });
   addWatchlistClose.addEventListener('click', closeAddWatchlist);
   addWatchlistPageEl.addEventListener('click', (e) => {
     if (e.target === addWatchlistPageEl) closeAddWatchlist();
+  });
+
+  groupPickerListEl.addEventListener('click', (e) => {
+    const item = e.target.closest('.group-picker-item');
+    if (!item || !groupPickerSymbol) return;
+    const groupId = item.dataset.group || null;
+    if (!watchlist.some((w) => w.symbol === groupPickerSymbol)) {
+      watchlist.push({ symbol: groupPickerSymbol, cat: groupPickerCat, groupId });
+      saveWatchlist();
+    }
+    closeGroupPicker();
+    updateChartHeart();
+    if (mode === 'watchlist') renderWatchlistTab();
+  });
+  groupPickerCancelEl.addEventListener('click', closeGroupPicker);
+  groupPickerOverlayEl.addEventListener('click', (e) => {
+    if (e.target === groupPickerOverlayEl) closeGroupPicker();
   });
 
   chartClose.addEventListener('click', closeChart);
