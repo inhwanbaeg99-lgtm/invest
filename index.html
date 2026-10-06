@@ -1834,27 +1834,15 @@
     portfolioDetailPageEl.classList.remove('open');
   }
 
-  // rss2json passes each feed's pubDate through without converting timezones,
-  // so "같은 시각처럼 보이는" strings actually mean different instants per
-  // source (confirmed: CNBC's feed is GMT, Korean outlets are KST). Tag each
-  // source with the offset its feed publishes in so sorting/relative-time
-  // stays correct across the mix.
-  const NEWS_SOURCES = [
-    { name: '한국경제', url: 'https://www.hankyung.com/feed/economy', tz: '+09:00', lang: 'ko' },
-    { name: '매일경제', url: 'https://www.mk.co.kr/rss/30100041/', tz: '+09:00', lang: 'ko' },
-    { name: 'CNBC Economy', url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html', tz: '+00:00', lang: 'en' },
-    { name: 'CNBC Business', url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', tz: '+00:00', lang: 'en' },
-    { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex', tz: '+00:00', lang: 'en' },
-  ];
   let newsItems = null;
   let newsLoading = false;
 
-  // Reuters/Bloomberg/AP via NewsAPI, proxied through the same Cloudflare Worker
-  // used for Yahoo -- NewsAPI's free tier only allows requests from localhost,
-  // and routing it server-side also keeps the API key out of this public repo.
+  // AP via NewsAPI, proxied through the same Cloudflare Worker used for Yahoo --
+  // NewsAPI's free tier only allows requests from localhost, and routing it
+  // server-side also keeps the API key out of this public repo.
   async function loadNewsApiArticles() {
     try {
-      const data = await fetchJson(`${YAHOO_PROXY}news?sources=reuters,bloomberg,associated-press`);
+      const data = await fetchJson(`${YAHOO_PROXY}news?sources=associated-press`);
       if (data.status !== 'ok') return [];
       return data.articles.map((a) => {
         // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending
@@ -1883,7 +1871,7 @@
   async function translateText(text) {
     try {
       const res = await fetchJson(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ko&dt=t&q=${encodeURIComponent(text)}`,
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&q=${encodeURIComponent(text)}`,
       );
       return res[0].map((seg) => seg[0]).join('');
     } catch (e) {
@@ -1905,42 +1893,14 @@
     if (newsLoading) return;
     newsLoading = true;
     try {
-      const [results, newsApiItems] = await Promise.all([
-        Promise.allSettled(
-          NEWS_SOURCES.map((src) =>
-            fetchJson(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(src.url)}`).then(
-              (data) => ({ src, data }),
-            ),
-          ),
-        ),
-        loadNewsApiArticles(),
-      ]);
-      const merged = [...newsApiItems];
-      results.forEach((r) => {
-        if (r.status !== 'fulfilled' || !r.value.data || r.value.data.status !== 'ok') return;
-        const { src, data } = r.value;
-        data.items.forEach((item) => {
-          merged.push({
-            title: item.title,
-            link: item.link,
-            pubDate: item.pubDate,
-            summary: (item.description || item.content || '').replace(/<[^>]+>/g, '').trim(),
-            sourceName: src.name,
-            tz: src.tz,
-            lang: src.lang,
-            ts: new Date(item.pubDate.replace(' ', 'T') + src.tz).getTime(),
-          });
-        });
-      });
+      const merged = await loadNewsApiArticles();
       if (merged.length) {
         merged.sort((a, b) => b.ts - a.ts);
         const top = merged.slice(0, 50);
         await Promise.allSettled(
-          top
-            .filter((item) => item.lang === 'en')
-            .map(async (item) => {
-              item.title = await translateText(item.title);
-            }),
+          top.map(async (item) => {
+            item.title = await translateText(item.title);
+          }),
         );
         newsItems = top;
         if (view === 'news') renderNews();
