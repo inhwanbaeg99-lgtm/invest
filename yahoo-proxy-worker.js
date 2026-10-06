@@ -72,15 +72,24 @@ async function newsProxy(url, env) {
   if (!env.NEWSAPI_KEY) {
     return json({ error: 'NEWSAPI_KEY secret not configured on this worker' }, 500);
   }
-  const sources = url.searchParams.get('sources') || 'reuters,bloomberg,associated-press';
+  // Passed straight through to NewsAPI's /v2/top-headlines -- e.g. ?sources=bloomberg
+  // or ?category=business&country=us. (NewsAPI itself rejects combining sources
+  // with category/country, so pick one style per request.)
+  const allowed = ['sources', 'category', 'country', 'q', 'pageSize'];
+  const upstream = new URLSearchParams();
+  for (const key of allowed) {
+    const val = url.searchParams.get(key);
+    if (val) upstream.set(key, val);
+  }
+  if (![...upstream.keys()].length) {
+    upstream.set('sources', 'reuters,bloomberg,associated-press');
+  }
+  upstream.set('apiKey', env.NEWSAPI_KEY);
   try {
-    const res = await fetch(
-      `https://newsapi.org/v2/top-headlines?sources=${encodeURIComponent(sources)}&apiKey=${env.NEWSAPI_KEY}`,
-      {
-        headers: { 'User-Agent': 'TickrNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/)' },
-        cf: { cacheTtl: 300, cacheEverything: true },
-      },
-    );
+    const res = await fetch(`https://newsapi.org/v2/top-headlines?${upstream.toString()}`, {
+      headers: { 'User-Agent': 'TickrNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/)' },
+      cf: { cacheTtl: 300, cacheEverything: true },
+    });
     const data = await res.json();
     return json(data, res.status);
   } catch (e) {

@@ -1840,29 +1840,38 @@
   // Reuters/Bloomberg/AP via NewsAPI, proxied through the same Cloudflare Worker used for Yahoo --
   // NewsAPI's free tier only allows requests from localhost, and routing it
   // server-side also keeps the API key out of this public repo.
+  // NewsAPI rejects combining `sources` with `category`, and AP/BBC/CNN/Washington
+  // Post don't have dedicated business-only source ids the way Bloomberg/WSJ do --
+  // so pull NewsAPI's own business-tagged headlines and keep only these 6 outlets.
+  const NEWS_SOURCE_WHITELIST = new Set([
+    'associated-press', 'bloomberg', 'the-wall-street-journal', 'bbc-news', 'cnn', 'the-washington-post',
+  ]);
+
   async function loadNewsApiArticles() {
     try {
-      const data = await fetchJson(`${YAHOO_PROXY}news?sources=reuters,bloomberg,associated-press`);
+      const data = await fetchJson(`${YAHOO_PROXY}news?category=business&country=us&pageSize=50`);
       if (data.status !== 'ok') return [];
-      return data.articles.map((a) => {
-        // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending
-        // on the upstream source, which breaks timeAgo()'s RSS-style string
-        // surgery either way -- round-trip through Date and re-serialize in the
-        // same space-separated, offset-less format the RSS feeds use instead.
-        const d = new Date(a.publishedAt);
-        const pad = (n) => String(n).padStart(2, '0');
-        const pubDate = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
-        return {
-          title: a.title,
-          link: a.url,
-          pubDate,
-          summary: (a.description || a.content || '').replace(/\[\+\d+ chars\]$/, '').trim(),
-          sourceName: (a.source && a.source.name) || 'NewsAPI',
-          tz: '+00:00',
-          lang: 'en',
-          ts: d.getTime(),
-        };
-      });
+      return data.articles
+        .filter((a) => a.source && NEWS_SOURCE_WHITELIST.has(a.source.id))
+        .map((a) => {
+          // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending
+          // on the upstream source, which breaks timeAgo()'s RSS-style string
+          // surgery either way -- round-trip through Date and re-serialize in the
+          // same space-separated, offset-less format the RSS feeds use instead.
+          const d = new Date(a.publishedAt);
+          const pad = (n) => String(n).padStart(2, '0');
+          const pubDate = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+          return {
+            title: a.title,
+            link: a.url,
+            pubDate,
+            summary: (a.description || a.content || '').replace(/\[\+\d+ chars\]$/, '').trim(),
+            sourceName: a.source.name,
+            tz: '+00:00',
+            lang: 'en',
+            ts: d.getTime(),
+          };
+        });
     } catch (e) {
       return [];
     }
