@@ -2450,58 +2450,11 @@
     }
   }
 
-  function stripNaverMarkup(s) {
-    return (s || '')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#39;/g, "'");
-  }
-
-  // 네이버 뉴스 검색 API는 카테고리 필터가 없는 순수 키워드 검색이라, 경제/금융
-  // 키워드 여러 개로 나눠 호출한 뒤 링크 기준으로 합쳐서 "경제 뉴스"를 근사한다.
-  const NAVER_FINANCE_QUERIES = ['증시', '코스피', '코스닥', '금리', '환율', '경제'];
-
-  async function loadNaverFinanceNews() {
-    try {
-      const results = await Promise.all(
-        NAVER_FINANCE_QUERIES.map((q) =>
-          fetchJson(`${YAHOO_PROXY}navernews?query=${encodeURIComponent(q)}&display=20&sort=date`).catch(
-            () => null,
-          ),
-        ),
-      );
-      const seen = new Set();
-      const items = [];
-      for (const data of results) {
-        if (!data || !data.items) continue;
-        for (const it of data.items) {
-          if (seen.has(it.link)) continue;
-          seen.add(it.link);
-          items.push({
-            title: stripNaverMarkup(it.title),
-            link: it.link,
-            summary: stripNaverMarkup(it.description),
-            sourceName: '네이버뉴스',
-            lang: 'ko',
-            ts: new Date(it.pubDate).getTime(),
-          });
-        }
-      }
-      return items;
-    } catch (e) {
-      return [];
-    }
-  }
-
   async function loadNewsKr() {
     if (newsLoadingKr) return;
     newsLoadingKr = true;
     try {
-      const [dartItems, naverItems] = await Promise.all([loadDartDisclosures(), loadNaverFinanceNews()]);
-      const merged = [...dartItems, ...naverItems];
+      const merged = await loadDartDisclosures();
       if (merged.length) {
         merged.sort((a, b) => b.ts - a.ts);
         newsItemsKr = merged.slice(0, 50);

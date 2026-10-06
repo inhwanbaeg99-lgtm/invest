@@ -22,10 +22,6 @@
 // DART usage: GET https://<your-worker>.workers.dev/dart?bgn_de=20250101&end_de=20250107
 // Response: passthrough of OpenDART's /api/list.json (공시검색) JSON.
 // Requires a DART_KEY secret (발급: https://opendart.fss.or.kr).
-//
-// Naver news usage: GET https://<your-worker>.workers.dev/navernews?query=코스피&display=20&sort=date
-// Response: passthrough of Naver's /v1/search/news.json JSON.
-// Requires NAVER_CLIENT_ID and NAVER_CLIENT_SECRET secrets (발급: https://developers.naver.com/apps).
 
 export default {
   async fetch(request, env) {
@@ -45,10 +41,6 @@ export default {
 
     if (url.pathname === '/dart') {
       return dartProxy(url, env);
-    }
-
-    if (url.pathname === '/navernews') {
-      return naverNewsProxy(url, env);
     }
 
     const symbolsParam = url.searchParams.get('symbols') || url.searchParams.get('symbol') || '';
@@ -180,34 +172,6 @@ async function dartProxy(url, env) {
     return json(data, res.status);
   } catch (e) {
     return json({ error: 'upstream fetch to opendart.fss.or.kr failed' }, 502);
-  }
-}
-
-async function naverNewsProxy(url, env) {
-  if (!env.NAVER_CLIENT_ID || !env.NAVER_CLIENT_SECRET) {
-    return json({ error: 'NAVER_CLIENT_ID/NAVER_CLIENT_SECRET secrets not configured on this worker' }, 500);
-  }
-  const query = url.searchParams.get('query');
-  if (!query) {
-    return json({ error: 'missing query param' }, 400);
-  }
-  const upstream = new URLSearchParams({
-    query,
-    display: url.searchParams.get('display') || '20',
-    sort: url.searchParams.get('sort') || 'date',
-  });
-  try {
-    const res = await fetch(`https://openapi.naver.com/v1/search/news.json?${upstream.toString()}`, {
-      headers: {
-        'X-Naver-Client-Id': env.NAVER_CLIENT_ID,
-        'X-Naver-Client-Secret': env.NAVER_CLIENT_SECRET,
-      },
-      cf: { cacheTtl: 180, cacheEverything: true },
-    });
-    const data = await res.json();
-    return json(data, res.status);
-  } catch (e) {
-    return json({ error: 'upstream fetch to openapi.naver.com failed' }, 502);
   }
 }
 
