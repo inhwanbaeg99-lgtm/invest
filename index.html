@@ -2511,10 +2511,11 @@
   let chartTimes = [];
   let chartRealStartIdx = 0;
   let chartTimeDomain = null;
+  let chartSessionBoundary = null;
   let chartRefValue = null;
   let scrubbing = false;
 
-  function drawChart(closes, times, hoverIdx, realStartIdx, timeDomain, refValue) {
+  function drawChart(closes, times, hoverIdx, realStartIdx, timeDomain, refValue, sessionBoundary) {
     const wrap = chartCanvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
     const w = wrap.clientWidth;
@@ -2570,13 +2571,33 @@
       ctx.stroke();
     }
 
+    // Binance's tokenized-stock symbols keep trading (and moving) outside regular
+    // hours too -- the colored stroke stops at the session boundary, but real
+    // after-hours candles past it still get drawn, just in gray like the rest
+    // of the "market closed" styling, instead of being dropped on the floor.
+    let sessionEndIdx = points.length - 1;
+    if (sessionBoundary != null) {
+      const firstAfterIdx = times.findIndex((t) => t > sessionBoundary);
+      if (firstAfterIdx !== -1) sessionEndIdx = Math.max(startIdx, firstAfterIdx - 1);
+    }
+
     ctx.beginPath();
     ctx.moveTo(points[startIdx][0], points[startIdx][1]);
-    for (let i = startIdx; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+    for (let i = startIdx; i <= sessionEndIdx; i++) ctx.lineTo(points[i][0], points[i][1]);
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
+
+    if (sessionEndIdx < points.length - 1) {
+      ctx.beginPath();
+      ctx.moveTo(points[sessionEndIdx][0], points[sessionEndIdx][1]);
+      for (let i = sessionEndIdx; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+      ctx.strokeStyle = '#8a8f9880';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
 
     // Room left after the real data -- either the session is still in progress
     // (tail runs to "now") or it's closed and the domain was stretched out to
@@ -2661,7 +2682,7 @@
       idx = Math.max(0, Math.min(chartCloses.length - 1, idx));
       hx = (idx / (chartCloses.length - 1)) * rect.width;
     }
-    drawChart(chartCloses, chartTimes, idx, chartRealStartIdx, chartTimeDomain, chartRefValue);
+    drawChart(chartCloses, chartTimes, idx, chartRealStartIdx, chartTimeDomain, chartRefValue, chartSessionBoundary);
     scrubDateEl.textContent = formatScrubDate(chartTimes[idx]);
     scrubPriceEl.textContent = formatPrice(chartCloses[idx]);
     chartScrubLabelEl.style.display = 'block';
@@ -2674,7 +2695,7 @@
     if (!scrubbing) return;
     scrubbing = false;
     chartScrubLabelEl.style.display = 'none';
-    drawChart(chartCloses, chartTimes, null, chartRealStartIdx, chartTimeDomain, chartRefValue);
+    drawChart(chartCloses, chartTimes, null, chartRealStartIdx, chartTimeDomain, chartRefValue, chartSessionBoundary);
   }
 
   chartCanvas.addEventListener('mousedown', (e) => {
@@ -2700,8 +2721,18 @@
     chartScrubLabelEl.style.display = 'none';
     const { interval, limit } = RANGES[currentRange];
     const session = currentRange === '1D' ? getRegularSession(currentCat, new Date()) : null;
+    // Binance's tokenized-stock symbols actually keep trading (and moving) around
+    // the clock, same as any crypto pair -- the regular session hours only bound
+    // when the chart is drawn in color. Once today's session has closed, stretch
+    // the fetch out to tomorrow's open (capped at "now") so the after-hours
+    // portion shows real price action instead of a flat placeholder.
+    let domainEnd = session ? session.fullEnd : null;
+    if (session && Date.now() >= session.fullEnd) {
+      domainEnd = getNextSessionStart(currentCat, session.fullEnd) || session.fullEnd;
+    }
+    const fetchEnd = session ? Math.min(Date.now(), domainEnd) : null;
     const url = session
-      ? `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&startTime=${session.start}&endTime=${session.end}&limit=1500`
+      ? `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&startTime=${session.start}&endTime=${fetchEnd}&limit=1500`
       : `${FAPI}/klines?symbol=${currentSymbol}&interval=${interval}&limit=${limit}`;
     try {
       const klines = await fetchJson(url);
@@ -2739,19 +2770,15 @@
       chartCloses = closes;
       chartTimes = times;
       chartRealStartIdx = realStartIdx;
-      chartTimeDomain = session ? [session.start, session.fullEnd] : null;
-      if (session && Date.now() >= session.fullEnd) {
-        // Today's session is over -- stretch the axis out to tomorrow's open
-        // instead of stopping dead at today's close, so there's somewhere for
-        // the gray "market closed" tail to go.
-        const nextOpen = getNextSessionStart(currentCat, session.fullEnd);
-        if (nextOpen) chartTimeDomain = [session.start, nextOpen];
-      }
+      chartTimeDomain = session ? [session.start, domainEnd] : null;
+      // Where regular-session hours end within the fetched data, so drawChart
+      // can color that point on forward gray even though it's real price data.
+      chartSessionBoundary = session ? session.fullEnd : null;
       // Same value the header %/sign is computed from, so the line's up/down
       // color can't disagree with the sign shown above it.
       chartRefValue = first;
 
-      drawChart(closes, times, null, realStartIdx, chartTimeDomain, chartRefValue);
+      drawChart(closes, times, null, realStartIdx, chartTimeDomain, chartRefValue, chartSessionBoundary);
     } catch (e) {
       chartLoadingEl.textContent = '차트를 불러오지 못했습니다';
       chartLoadingEl.style.display = 'flex';
