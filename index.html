@@ -2460,10 +2460,21 @@
     newsDetailPageEl.classList.remove('open');
   }
 
+  // Matches the same session-anchored % every list/watchlist row shows,
+  // instead of the raw rolling-24h change -- keeps search results, the
+  // add-holding header, and the DCA header consistent with 전체시세.
+  function primeSessionOpensForMatches(matches, onDone) {
+    const byCat = {};
+    matches.forEach(({ t, cat }) => {
+      (byCat[cat] = byCat[cat] || []).push(t.symbol);
+    });
+    Object.keys(byCat).forEach((cat) => ensureSessionOpens(byCat[cat], cat, onDone));
+  }
+
   function renderSearchRow(t, cat) {
     const savedMode = mode;
     mode = cat;
-    const changeNum = Number(t.priceChangePercent);
+    const changeNum = sessionAnchoredChangePct(t.symbol, cat, Number(t.lastPrice), Number(t.priceChangePercent));
     const cls = changeNum > 0 ? 'up' : changeNum < 0 ? 'down' : '';
     const sign = changeNum > 0 ? '+' : '';
     const name = displayName(t.symbol);
@@ -2503,6 +2514,7 @@
     searchPageListEl.innerHTML = matches.length
       ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
       : '<div class="empty">검색 결과가 없습니다</div>';
+    primeSessionOpensForMatches(matches, () => performGlobalSearch(searchInputEl.value));
   }
 
   function openAddHolding() {
@@ -2543,6 +2555,7 @@
     addHoldingResultsEl.innerHTML = matches.length
       ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
       : '<div class="empty">검색 결과가 없습니다</div>';
+    primeSessionOpensForMatches(matches, () => renderAddHoldingResults(addHoldingSearchInput.value));
   }
 
   function openAddWatchlist() {
@@ -2577,6 +2590,7 @@
     addWatchlistResultsEl.innerHTML = matches.length
       ? matches.map(({ t, cat }) => renderSearchRow(t, cat)).join('')
       : '<div class="empty">검색 결과가 없습니다</div>';
+    primeSessionOpensForMatches(matches, () => renderAddWatchlistResults(addWatchlistSearchInput.value));
   }
 
   // Re-renders just the selected stock's live price/change -- called on currency
@@ -2586,10 +2600,16 @@
     if (!addHoldingSelected) return;
     const t = findTicker(addHoldingSelected.symbol);
     if (t) {
-      const changePct = Number(t.priceChangePercent);
+      const changePct = sessionAnchoredChangePct(
+        addHoldingSelected.symbol,
+        addHoldingSelected.cat,
+        Number(t.lastPrice),
+        Number(t.priceChangePercent),
+      );
       const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
       const sign = changePct > 0 ? '+' : '';
       addHoldingHeaderPriceEl.innerHTML = `${formatPrice(t.lastPrice)} <span class="${cls}">${sign}${changePct.toFixed(2)}%</span>`;
+      ensureSessionOpens([addHoldingSelected.symbol], addHoldingSelected.cat, refreshAddHoldingHeaderPrice);
     } else {
       addHoldingHeaderPriceEl.innerHTML = '';
     }
@@ -3111,8 +3131,11 @@
 
   // Fetches each symbol's actual opening print for the current session once (cached
   // for the rest of that session), throttled so a ~70-symbol tab doesn't fire 70
-  // concurrent requests at once. Re-renders whatever's on screen as results land.
-  async function ensureSessionOpens(symbols, cat) {
+  // concurrent requests at once. Re-renders whatever's on screen as results land --
+  // defaults to the main list, but callers showing a symbol somewhere else
+  // (search results, a single selected stock) pass their own refresh.
+  async function ensureSessionOpens(symbols, cat, onDone) {
+    onDone = onDone || renderCurrent;
     if (!MARKET_HOURS[cat] || !symbols.length) return;
     const session = getRegularSession(cat, new Date());
     if (!session) return;
@@ -3132,7 +3155,7 @@
       }
     }
     await Promise.all(Array.from({ length: Math.min(6, missing.length) }, worker));
-    renderCurrent();
+    onDone();
   }
 
   let currentSymbol = null;
@@ -3565,10 +3588,13 @@
     const h = holdings.find((x) => x.symbol === currentSymbol);
     if (!h) return;
     const t = findTicker(currentSymbol);
-    const changePct = t ? Number(t.priceChangePercent) : 0;
+    const changePct = t
+      ? sessionAnchoredChangePct(currentSymbol, currentCat, Number(t.lastPrice), Number(t.priceChangePercent))
+      : 0;
     const changeCls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
     const changeSign = changePct > 0 ? '+' : '';
     dcaPagePriceEl.innerHTML = `${formatNativeAmount(getLivePriceNative().native)} <span class="${changeCls}">${changeSign}${changePct.toFixed(2)}%</span>`;
+    if (t) ensureSessionOpens([currentSymbol], currentCat, renderDcaPage);
 
     const { native: priceNative } = getDcaPricePair();
     renderDcaSentence(priceNative);
