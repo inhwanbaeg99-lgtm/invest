@@ -1072,6 +1072,172 @@
     font-weight: 700;
     cursor: pointer;
   }
+  .chart-community-section {
+    margin-top: 24px;
+  }
+  .chart-community-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .community-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .community-logout {
+    font-size: 12px;
+    color: var(--ink-sub);
+    cursor: pointer;
+  }
+  .avatar-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    object-fit: cover;
+    flex: 0 0 auto;
+    background: var(--bg);
+  }
+  .avatar-fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink-sub);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .comment-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .comment-row:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+  .comment-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .comment-author {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-sub);
+  }
+  .comment-text {
+    margin-top: 2px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .comment-meta {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--ink-sub);
+  }
+  .comment-like-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--ink-sub);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 0;
+  }
+  .comment-like-btn.liked {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .comment-delete-btn {
+    cursor: pointer;
+    color: var(--ink-sub);
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 0;
+  }
+  .community-more-link {
+    display: block;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink-sub);
+    cursor: pointer;
+  }
+  .community-compose {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .community-compose input {
+    flex: 1;
+    min-width: 0;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .community-compose input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .community-compose button {
+    flex: 0 0 auto;
+    height: 42px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #04201d;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .login-gate {
+    text-align: center;
+    padding: 18px 10px;
+  }
+  .login-gate-msg {
+    font-size: 13.5px;
+    color: var(--ink-sub);
+    margin-bottom: 12px;
+  }
+  .login-gate-btn {
+    height: 42px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 10px;
+    background: #fee500;
+    color: #191600;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
   .chart-stat-row {
     display: flex;
     align-items: flex-start;
@@ -1395,6 +1561,14 @@
           <div id="chartMyHoldingList"></div>
         </div>
       </div>
+      <div class="chart-community-section" id="chartCommunitySection">
+        <div class="chart-community-card">
+          <div class="community-header">
+            <div class="home-section-title">커뮤니티</div>
+          </div>
+          <div id="chartCommunityBody"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1654,6 +1828,7 @@
     </div>
   </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
   if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
     document.documentElement.classList.add('pwa-standalone');
@@ -1796,6 +1971,68 @@
   // symbol+sessionStart -> that session's actual opening print, so list rows can
   // show "since regular-session-open" change instead of Binance's rolling 24h window.
   let sessionOpenCache = {};
+
+  // Supabase anon key is meant to be public (safe to ship in client code --
+  // Row Level Security on the tables is what actually gates access, not this
+  // key being secret).
+  const SUPABASE_URL = 'https://vnfncfshxqnqixjqxohx.supabase.co';
+  const SUPABASE_ANON_KEY =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuZm5jZnNoeHFucWl4anF4b2h4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMDQwNjAsImV4cCI6MjEwNjg4MDA2MH0.cCxGBvaVBdr7qG2UnDOC8XoXpBhUmNETaCe4IVT12PQ';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let currentUser = null;
+
+  function userDisplayName(user) {
+    if (!user) return '';
+    const meta = user.user_metadata || {};
+    return meta.name || meta.full_name || meta.nickname || user.email || '사용자';
+  }
+
+  function userAvatarUrl(user) {
+    if (!user) return '';
+    const meta = user.user_metadata || {};
+    return meta.avatar_url || meta.picture || '';
+  }
+
+  function avatarHtml(user) {
+    const url = userAvatarUrl(user);
+    if (url) return `<img class="avatar-img" src="${url}" alt="" />`;
+    const letter = (userDisplayName(user) || '?').trim().charAt(0).toUpperCase();
+    return `<div class="avatar-fallback">${letter}</div>`;
+  }
+
+  function kakaoLogin() {
+    sb.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: { redirectTo: window.location.origin + window.location.pathname },
+    });
+  }
+
+  function appLogout() {
+    sb.auth.signOut();
+  }
+
+  // Login-gated views re-render themselves whenever auth state changes --
+  // news only if it's the active tab, community only if a chart is open.
+  sb.auth.onAuthStateChange((_event, session) => {
+    currentUser = session ? session.user : null;
+    if (view === 'news') renderNews();
+    if (chartOverlay.classList.contains('open')) renderChartCommunity();
+  });
+  sb.auth.getSession().then(({ data }) => {
+    currentUser = data.session ? data.session.user : null;
+    if (view === 'news') renderNews();
+    if (chartOverlay.classList.contains('open')) renderChartCommunity();
+  });
+
+  // Shared by any section that's members-only (news, community).
+  function loginGateHtml(message) {
+    return `
+      <div class="login-gate">
+        <div class="login-gate-msg">${message}</div>
+        <button type="button" class="login-gate-btn" data-action="kakao-login">카카오로 로그인</button>
+      </div>
+    `;
+  }
   let portfolioEditMode = false;
   let watchlistTabEditMode = false;
   let addHoldingSelected = null;
@@ -2407,6 +2644,10 @@
   }
 
   function renderNews() {
+    if (!currentUser) {
+      listEl.innerHTML = `<div class="home-card">${loginGateHtml('로그인하면 뉴스를 볼 수 있어요')}</div>`;
+      return;
+    }
     if (!newsItems) {
       listEl.innerHTML = '<div class="empty">뉴스를 불러오는 중...</div>';
       loadNews();
@@ -2980,6 +3221,7 @@
   const chartRangesEl = document.getElementById('chartRanges');
   const chartMyHoldingSectionEl = document.getElementById('chartMyHoldingSection');
   const chartMyHoldingListEl = document.getElementById('chartMyHoldingList');
+  const chartCommunityBodyEl = document.getElementById('chartCommunityBody');
   const chartDcaBtn = document.getElementById('chartDcaBtn');
   const dcaPageEl = document.getElementById('dcaPage');
   const dcaCloseEl = document.getElementById('dcaClose');
@@ -3440,6 +3682,8 @@
     chartOverlay.classList.add('open');
     updateChartHeart();
     updateChartMyHolding();
+    chartCommunityExpanded = false;
+    renderChartCommunity();
     loadChart();
   }
 
@@ -3469,6 +3713,171 @@
     `;
     chartMyHoldingSectionEl.hidden = false;
   }
+
+  // Comment content/author names are free text from other users -- never
+  // trust it going into innerHTML.
+  function escapeHtml(str) {
+    return String(str).replace(
+      /[&<>"']/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+    );
+  }
+
+  function timeAgoIso(iso) {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return '방금 전';
+    if (mins < 60) return `${mins}분 전`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}시간 전`;
+    return `${Math.floor(hours / 24)}일 전`;
+  }
+
+  let chartCommunityComments = [];
+  let chartCommunityExpanded = false;
+  let chartCommunityLoadedFor = null;
+
+  async function loadChartCommunity() {
+    if (!currentSymbol || !currentUser) return;
+    const symbol = currentSymbol;
+    try {
+      const { data, error } = await sb
+        .from('comments')
+        .select('*, comment_likes(user_id)')
+        .eq('symbol', symbol)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      if (symbol !== currentSymbol) return;
+      chartCommunityComments = (data || []).map((c) => ({
+        ...c,
+        likeCount: c.comment_likes.length,
+        likedByMe: c.comment_likes.some((l) => l.user_id === currentUser.id),
+      }));
+      chartCommunityLoadedFor = symbol;
+      renderChartCommunity();
+    } catch (e) {
+      chartCommunityComments = [];
+    }
+  }
+
+  function commentRowHtml(c) {
+    const avatar = c.author_avatar
+      ? `<img class="avatar-img" src="${escapeHtml(c.author_avatar)}" alt="" />`
+      : `<div class="avatar-fallback">${escapeHtml((c.author_name || '?').charAt(0).toUpperCase())}</div>`;
+    const canDelete = currentUser && c.user_id === currentUser.id;
+    return `
+      <div class="comment-row" data-id="${c.id}">
+        ${avatar}
+        <div class="comment-body">
+          <div class="comment-author">${escapeHtml(c.author_name)}</div>
+          <div class="comment-text">${escapeHtml(c.content)}</div>
+          <div class="comment-meta">
+            <button type="button" class="comment-like-btn ${c.likedByMe ? 'liked' : ''}" data-action="like" data-id="${c.id}">👍 ${c.likeCount}</button>
+            <span>${timeAgoIso(c.created_at)}</span>
+            ${canDelete ? `<button type="button" class="comment-delete-btn" data-action="delete" data-id="${c.id}">삭제</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderChartCommunity() {
+    if (!currentUser) {
+      chartCommunityBodyEl.innerHTML = loginGateHtml('로그인하면 종목별 커뮤니티를 볼 수 있어요');
+      return;
+    }
+    if (chartCommunityLoadedFor !== currentSymbol) {
+      chartCommunityBodyEl.innerHTML = '<div class="empty">불러오는 중...</div>';
+      loadChartCommunity();
+      return;
+    }
+    const sorted = [...chartCommunityComments].sort((a, b) => b.likeCount - a.likeCount || new Date(b.created_at) - new Date(a.created_at));
+    const shown = chartCommunityExpanded ? sorted : sorted.slice(0, 1);
+    const listHtml = shown.length
+      ? shown.map(commentRowHtml).join('')
+      : '<div class="empty">아직 의견이 없어요. 첫 의견을 남겨보세요.</div>';
+    const moreHtml =
+      !chartCommunityExpanded && sorted.length > 1
+        ? `<div class="community-more-link" id="chartCommunityMoreLink">인기 의견 더보기 (${sorted.length - 1}) ›</div>`
+        : '';
+    chartCommunityBodyEl.innerHTML = `
+      ${listHtml}
+      ${moreHtml}
+      <div class="community-compose">
+        <input type="text" id="chartCommunityInput" placeholder="의견을 남겨보세요" maxlength="300" />
+        <button type="button" id="chartCommunitySubmit">작성</button>
+      </div>
+    `;
+  }
+
+  async function submitChartComment() {
+    const input = document.getElementById('chartCommunityInput');
+    const content = input.value.trim();
+    if (!content || !currentUser || !currentSymbol) return;
+    const symbol = currentSymbol;
+    input.disabled = true;
+    try {
+      const { error } = await sb.from('comments').insert({
+        symbol,
+        user_id: currentUser.id,
+        author_name: userDisplayName(currentUser),
+        author_avatar: userAvatarUrl(currentUser),
+        content,
+      });
+      if (error) throw error;
+      input.value = '';
+      await loadChartCommunity();
+    } catch (e) {
+      alert('의견 작성에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      input.disabled = false;
+    }
+  }
+
+  chartCommunityBodyEl.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-action="kakao-login"]')) {
+      kakaoLogin();
+      return;
+    }
+    if (e.target.id === 'chartCommunityMoreLink') {
+      chartCommunityExpanded = true;
+      renderChartCommunity();
+      return;
+    }
+    if (e.target.id === 'chartCommunitySubmit') {
+      submitChartComment();
+      return;
+    }
+    const likeBtn = e.target.closest('[data-action="like"]');
+    if (likeBtn) {
+      if (!currentUser) return;
+      const id = likeBtn.dataset.id;
+      const c = chartCommunityComments.find((x) => String(x.id) === id);
+      if (!c) return;
+      likeBtn.disabled = true;
+      try {
+        if (c.likedByMe) {
+          await sb.from('comment_likes').delete().eq('comment_id', id).eq('user_id', currentUser.id);
+        } else {
+          await sb.from('comment_likes').insert({ comment_id: id, user_id: currentUser.id });
+        }
+        await loadChartCommunity();
+      } finally {
+        likeBtn.disabled = false;
+      }
+      return;
+    }
+    const deleteBtn = e.target.closest('[data-action="delete"]');
+    if (deleteBtn) {
+      if (!currentUser || !confirm('이 의견을 삭제할까요?')) return;
+      const id = deleteBtn.dataset.id;
+      await sb.from('comments').delete().eq('id', id).eq('user_id', currentUser.id);
+      await loadChartCommunity();
+    }
+  });
+  chartCommunityBodyEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'chartCommunityInput') submitChartComment();
+  });
 
   // Live market price, used as the default basis for the hypothetical extra
   // purchase. The user can override it (dcaPriceDigits) to ask "what if I'd
@@ -3727,6 +4136,10 @@
   });
 
   listEl.addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="kakao-login"]')) {
+      kakaoLogin();
+      return;
+    }
     if (e.target.closest('#portfolioCard')) {
       openPortfolioDetail();
       return;
