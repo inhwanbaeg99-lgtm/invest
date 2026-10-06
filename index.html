@@ -1847,6 +1847,15 @@
     'associated-press', 'bloomberg', 'the-wall-street-journal', 'bbc-news', 'cnn', 'the-washington-post',
   ]);
 
+  // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending on
+  // the upstream source, which breaks timeAgo()'s RSS-style string surgery
+  // either way -- round-trip through Date and re-serialize in the same
+  // space-separated, offset-less format the RSS/Atom feeds below also use.
+  function toRssStyleUtc(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  }
+
   async function loadNewsApiArticles() {
     try {
       const data = await fetchJson(`${YAHOO_PROXY}news?category=business&country=us&pageSize=100`);
@@ -1854,19 +1863,83 @@
       return data.articles
         .filter((a) => a.source && NEWS_SOURCE_WHITELIST.has(a.source.id))
         .map((a) => {
-          // NewsAPI's publishedAt is inconsistently "...Z" or "...+00:00" depending
-          // on the upstream source, which breaks timeAgo()'s RSS-style string
-          // surgery either way -- round-trip through Date and re-serialize in the
-          // same space-separated, offset-less format the RSS feeds use instead.
           const d = new Date(a.publishedAt);
-          const pad = (n) => String(n).padStart(2, '0');
-          const pubDate = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
           return {
             title: a.title,
             link: a.url,
-            pubDate,
+            pubDate: toRssStyleUtc(d),
             summary: (a.description || a.content || '').replace(/\[\+\d+ chars\]$/, '').trim(),
             sourceName: a.source.name,
+            tz: '+00:00',
+            lang: 'en',
+            ts: d.getTime(),
+          };
+        });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // PR Newswire / GlobeNewswire (company press releases) and SEC EDGAR (real-time
+  // 8-K filings -- material events, earnings, M&A) -- the primary-source "C tier"
+  // that often breaks before any journalist writes about it. Proxied through the
+  // worker's /rss route (CORS + SEC's required identifying User-Agent).
+  const FEED_SOURCES = [
+    {
+      name: 'PR Newswire',
+      url: 'https://www.prnewswire.com/rss/financial-services-latest-news/financial-services-latest-news-list.rss',
+      format: 'rss',
+    },
+    {
+      name: 'GlobeNewswire',
+      url: 'https://www.globenewswire.com/RssFeed/subjectcode/5-Press%20Releases/feedTitle/GlobeNewswire%20-%20Press%20Releases',
+      format: 'rss',
+    },
+    {
+      name: 'SEC EDGAR',
+      url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=include&count=40&output=atom',
+      format: 'atom',
+    },
+  ];
+
+  function parseFeedXml(xmlText, format) {
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    if (doc.querySelector('parsererror')) return [];
+    const nodes = [...doc.getElementsByTagName(format === 'atom' ? 'entry' : 'item')];
+    return nodes
+      .map((node) => {
+        const text = (tag) => node.querySelector(tag)?.textContent?.trim() || '';
+        let link = text('link');
+        if (format === 'atom') {
+          const linkEls = [...node.getElementsByTagName('link')];
+          const alt = linkEls.find((l) => l.getAttribute('rel') === 'alternate') || linkEls[0];
+          link = alt ? alt.getAttribute('href') : '';
+        }
+        const dateStr = format === 'atom' ? text('updated') : text('pubDate');
+        const summaryRaw = format === 'atom' ? text('summary') : text('description');
+        return {
+          title: text('title'),
+          link,
+          dateStr,
+          summary: summaryRaw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+        };
+      })
+      .filter((it) => it.title && it.dateStr);
+  }
+
+  async function loadFeedArticles(src) {
+    try {
+      const xml = await fetch(`${YAHOO_PROXY}rss?url=${encodeURIComponent(src.url)}`).then((r) => r.text());
+      return parseFeedXml(xml, src.format)
+        .slice(0, 10)
+        .map((it) => {
+          const d = new Date(it.dateStr);
+          return {
+            title: it.title,
+            link: it.link,
+            pubDate: toRssStyleUtc(d),
+            summary: it.summary,
+            sourceName: src.name,
             tz: '+00:00',
             lang: 'en',
             ts: d.getTime(),
@@ -1902,7 +1975,11 @@
     if (newsLoading) return;
     newsLoading = true;
     try {
-      const merged = await loadNewsApiArticles();
+      const [newsApiItems, ...feedResults] = await Promise.all([
+        loadNewsApiArticles(),
+        ...FEED_SOURCES.map(loadFeedArticles),
+      ]);
+      const merged = [...newsApiItems, ...feedResults.flat()];
       if (merged.length) {
         merged.sort((a, b) => b.ts - a.ts);
         const top = merged.slice(0, 50);

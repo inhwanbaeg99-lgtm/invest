@@ -14,6 +14,10 @@
 // Requires a NEWSAPI_KEY secret on this worker (dashboard -> Settings ->
 // Variables and Secrets, or `wrangler secret put NEWSAPI_KEY`) -- the key
 // never appears in this source file or in the deployed frontend.
+//
+// RSS/Atom usage: GET https://<your-worker>.workers.dev/rss?url=<encoded feed url>
+// Response: the raw XML, passed through with CORS enabled. Restricted to a
+// domain whitelist below -- this is NOT an open proxy.
 
 export default {
   async fetch(request, env) {
@@ -25,6 +29,10 @@ export default {
 
     if (url.pathname === '/news') {
       return newsProxy(url, env);
+    }
+
+    if (url.pathname === '/rss') {
+      return rssProxy(url);
     }
 
     const symbolsParam = url.searchParams.get('symbols') || url.searchParams.get('symbol') || '';
@@ -94,6 +102,45 @@ async function newsProxy(url, env) {
     return json(data, res.status);
   } catch (e) {
     return json({ error: 'upstream fetch to newsapi.org failed' }, 502);
+  }
+}
+
+// Domains Tickr actually needs RSS/Atom feeds from. Keeping this an allowlist
+// (rather than fetching whatever `url` is given) stops the worker from being
+// usable as a general-purpose CORS-bypass proxy for arbitrary sites.
+const RSS_ALLOWED_HOSTS = ['www.prnewswire.com', 'www.globenewswire.com', 'www.sec.gov'];
+
+async function rssProxy(url) {
+  const target = url.searchParams.get('url');
+  if (!target) {
+    return json({ error: 'missing url param' }, 400);
+  }
+  let targetUrl;
+  try {
+    targetUrl = new URL(target);
+  } catch (e) {
+    return json({ error: 'invalid url param' }, 400);
+  }
+  if (!RSS_ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+    return json({ error: `host not allowed: ${targetUrl.hostname}` }, 403);
+  }
+  try {
+    const res = await fetch(targetUrl.toString(), {
+      headers: {
+        // SEC specifically requires an identifying User-Agent with contact info
+        // (fair-access policy) or it 403s; the other two don't care either way.
+        'User-Agent': 'TickrNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/; contact: inhwanbaeg99@gmail.com)',
+        Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml',
+      },
+      cf: { cacheTtl: 300, cacheEverything: true },
+    });
+    const body = await res.text();
+    return new Response(body, {
+      status: res.status,
+      headers: { 'Content-Type': 'application/xml; charset=utf-8', ...corsHeaders() },
+    });
+  } catch (e) {
+    return json({ error: 'upstream fetch failed' }, 502);
   }
 }
 
