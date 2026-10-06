@@ -2628,17 +2628,17 @@
     const caret = '<span class="dca-caret"></span>';
 
     const krwCaret = ahoActiveField === 'priceKrw' ? caret : '';
-    const krwNum = formatAhoDigits(ahoPriceKrwDigits);
+    const krwNum = ahoPriceKrwDigits ? formatAhoDigits(ahoPriceKrwDigits) : '0';
     ahoPriceKrwLineEl.innerHTML = `<span class="dca-field-tap" data-field="priceKrw">${krwNum}</span>${krwCaret}<span class="dca-field-tap" data-field="priceKrw">원</span>`;
 
     const usdCaret = ahoActiveField === 'priceUsd' ? caret : '';
-    const usdNum = formatAhoDigits(ahoPriceUsdDigits);
+    const usdNum = ahoPriceUsdDigits ? formatAhoDigits(ahoPriceUsdDigits) : '0';
     ahoPriceUsdLineEl.innerHTML = `<span class="dca-field-tap" data-field="priceUsd">$${usdNum}</span>${usdCaret}`;
 
     const qtyCaret = ahoActiveField === 'qty' ? caret : '';
     if (!ahoQtyDigits) {
       const placeholder = ahoMode === 'qty' ? '몇 주 담을까요?' : '얼마나 담을까요?';
-      ahoQtyLineEl.innerHTML = `<span class="dca-field-tap dca-dim" data-field="qty">${placeholder}</span>${qtyCaret}`;
+      ahoQtyLineEl.innerHTML = `${qtyCaret}<span class="dca-field-tap dca-dim" data-field="qty">${placeholder}</span>`;
     } else {
       const qtyNum = formatAhoDigits(ahoQtyDigits);
       const unit = ahoMode === 'qty' ? '주' : currency === 'KRW' ? '원' : '달러';
@@ -2662,10 +2662,9 @@
 
     const existing = holdings.find((h) => h.symbol === symbol);
     ahoMode = 'qty';
-    // Quantity is the field someone typically needs to type right away --
-    // price starts pre-filled with a sensible default (today's live price,
-    // or the existing stored price) -- so the keypad starts pointed there.
-    ahoActiveField = 'qty';
+    // Starts pointed at 평균 매입가 (원) -- that's the first thing to fill in,
+    // not quantity.
+    ahoActiveField = 'priceKrw';
     if (existing) {
       ahoPriceKrwDigits = String(Math.round(existing.avgPriceKrw));
       ahoPriceUsdDigits = String(Math.round(existing.avgPriceUsd));
@@ -2675,11 +2674,10 @@
       ahoPriceKrwDirty = true;
       ahoPriceUsdDirty = true;
     } else {
-      const t = findTicker(symbol);
-      const usd = t ? Number(t.lastPrice) : 0;
-      const krw = krwRate ? usd * krwRate : 0;
-      ahoPriceKrwDigits = krw ? String(Math.round(krw)) : '';
-      ahoPriceUsdDigits = usd ? String(Math.round(usd)) : '';
+      // A fresh entry starts both prices at 0 rather than pre-filled with
+      // today's live price -- the user types in what they actually paid.
+      ahoPriceKrwDigits = '';
+      ahoPriceUsdDigits = '';
       ahoQtyDigits = '';
       ahoPriceKrwDirty = false;
       ahoPriceUsdDirty = false;
