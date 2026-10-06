@@ -1979,6 +1979,12 @@
   const SUPABASE_ANON_KEY =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuZm5jZnNoeHFucWl4anF4b2h4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzMDQwNjAsImV4cCI6MjEwNjg4MDA2MH0.cCxGBvaVBdr7qG2UnDOC8XoXpBhUmNETaCe4IVT12PQ';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // TEMP: lets the owner preview the gated news/community layout without
+  // logging in. Flip back to false to re-enforce the login requirement.
+  // Note this only bypasses the frontend check -- Supabase's own Row Level
+  // Security still requires a real session to actually read/write comments,
+  // so the community list will show empty until a real login happens.
+  const DEV_SKIP_LOGIN_GATE = true;
   let currentUser = null;
 
   function userDisplayName(user) {
@@ -2644,7 +2650,7 @@
   }
 
   function renderNews() {
-    if (!currentUser) {
+    if (!currentUser && !DEV_SKIP_LOGIN_GATE) {
       listEl.innerHTML = `<div class="home-card">${loginGateHtml('로그인하면 뉴스를 볼 수 있어요')}</div>`;
       return;
     }
@@ -3738,7 +3744,7 @@
   let chartCommunityLoadedFor = null;
 
   async function loadChartCommunity() {
-    if (!currentSymbol || !currentUser) return;
+    if (!currentSymbol || (!currentUser && !DEV_SKIP_LOGIN_GATE)) return;
     const symbol = currentSymbol;
     try {
       const { data, error } = await sb
@@ -3751,7 +3757,7 @@
       chartCommunityComments = (data || []).map((c) => ({
         ...c,
         likeCount: c.comment_likes.length,
-        likedByMe: c.comment_likes.some((l) => l.user_id === currentUser.id),
+        likedByMe: currentUser ? c.comment_likes.some((l) => l.user_id === currentUser.id) : false,
       }));
       chartCommunityLoadedFor = symbol;
       renderChartCommunity();
@@ -3782,7 +3788,7 @@
   }
 
   function renderChartCommunity() {
-    if (!currentUser) {
+    if (!currentUser && !DEV_SKIP_LOGIN_GATE) {
       chartCommunityBodyEl.innerHTML = loginGateHtml('로그인하면 종목별 커뮤니티를 볼 수 있어요');
       return;
     }
