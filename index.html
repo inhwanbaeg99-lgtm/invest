@@ -467,7 +467,8 @@
     margin-bottom: 10px;
   }
   .watchlist-section-header {
-    margin-bottom: 4px;
+    margin-top: 14px;
+    margin-bottom: 2px;
   }
   .home-section-title {
     font-size: 16px;
@@ -1053,6 +1054,39 @@
     margin-top: 24px;
     flex: 0 0 auto;
   }
+  .chart-stat-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .chart-stat-row:last-child {
+    border-bottom: none;
+  }
+  .chart-stat-label {
+    flex: 0 0 auto;
+    font-size: 14px;
+    color: var(--ink-sub);
+    padding-top: 1px;
+  }
+  .chart-stat-value {
+    text-align: right;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .chart-stat-sub {
+    margin-top: 3px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink-sub);
+  }
+  .chart-stat-sub.up {
+    color: var(--up);
+  }
+  .chart-stat-sub.down {
+    color: var(--down);
+  }
   .chart-range-btn {
     flex: 1;
     min-width: 0;
@@ -1549,6 +1583,22 @@
     }
     if (!krwRate) return '';
     return Math.round(n * krwRate).toLocaleString('ko-KR') + '원';
+  }
+
+  // Formats a holding's stored avg purchase price (entered independently in
+  // both currencies, no FX conversion) as a {primary, secondary} pair for the
+  // currently active currency toggle.
+  function formatAvgPricePair(h) {
+    const krw = Math.round(h.avgPriceKrw || 0).toLocaleString('ko-KR') + '원';
+    const usdNum = Number(h.avgPriceUsd || 0);
+    const usd =
+      '$' +
+      (usdNum >= 100
+        ? usdNum.toLocaleString('en-US', { maximumFractionDigits: 2 })
+        : usdNum >= 1
+          ? usdNum.toLocaleString('en-US', { maximumFractionDigits: 4 })
+          : usdNum.toLocaleString('en-US', { maximumFractionDigits: 6 }));
+    return currency === 'KRW' ? { primary: krw, secondary: usd } : { primary: usd, secondary: krw };
   }
 
   // Live-formats a number input as the user types: adds thousands commas and
@@ -2974,7 +3024,24 @@
       chartMyHoldingSectionEl.hidden = true;
       return;
     }
-    chartMyHoldingListEl.innerHTML = holdingRowHtml(h, holdingStats(h), false);
+    const s = holdingStats(h);
+    const pnlCls = s.pnlNative > 0 ? 'up' : s.pnlNative < 0 ? 'down' : '';
+    const pnlSign = s.pnlNative > 0 ? '+' : s.pnlNative < 0 ? '-' : '';
+    const avg = formatAvgPricePair(h);
+    chartMyHoldingListEl.innerHTML = `
+      <div class="chart-stat-row">
+        <div class="chart-stat-label">1주 평균</div>
+        <div class="chart-stat-value">${avg.primary}<div class="chart-stat-sub">${avg.secondary}</div></div>
+      </div>
+      <div class="chart-stat-row">
+        <div class="chart-stat-label">보유 수량</div>
+        <div class="chart-stat-value">${h.qty.toLocaleString('ko-KR')}주</div>
+      </div>
+      <div class="chart-stat-row">
+        <div class="chart-stat-label">총 금액</div>
+        <div class="chart-stat-value">${formatNativeAmount(s.valueNative)}<div class="chart-stat-sub ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(s.pnlNative))} (${pnlSign}${Math.abs(s.pnlPct).toFixed(1)}%)</div></div>
+      </div>
+    `;
     chartMyHoldingSectionEl.hidden = false;
   }
 
