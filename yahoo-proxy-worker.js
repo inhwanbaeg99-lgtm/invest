@@ -166,12 +166,24 @@ async function dartProxy(url, env) {
   upstream.set('crtfc_key', env.DART_KEY);
   try {
     const res = await fetch(`https://opendart.fss.or.kr/api/list.json?${upstream.toString()}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+        Accept: 'application/json',
+      },
       cf: { cacheTtl: 300, cacheEverything: true },
     });
-    const data = await res.json();
-    return json(data, res.status);
+    const text = await res.text();
+    try {
+      return json(JSON.parse(text), res.status);
+    } catch (parseErr) {
+      // surface the raw upstream body/status instead of swallowing it --
+      // a WAF/block page comes back as HTML, not JSON, and this is the only
+      // way to tell that apart from a real network failure below.
+      return json({ error: 'opendart response was not JSON', status: res.status, body: text.slice(0, 500) }, 502);
+    }
   } catch (e) {
-    return json({ error: 'upstream fetch to opendart.fss.or.kr failed' }, 502);
+    return json({ error: 'upstream fetch to opendart.fss.or.kr failed', detail: String(e) }, 502);
   }
 }
 
