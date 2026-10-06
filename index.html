@@ -225,11 +225,8 @@
   }
   .mode-tab {
     flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 16px 7px;
+    height: 36px;
+    padding: 0 16px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: var(--panel);
@@ -239,28 +236,6 @@
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
-  }
-  .mode-tab-icon {
-    font-size: 15px;
-    line-height: 1;
-    height: 15px;
-    margin-bottom: 4px;
-    opacity: 1;
-    overflow: hidden;
-    transition: height 0.2s ease, opacity 0.15s ease, margin 0.2s ease;
-  }
-  .mode-tab-icon-text {
-    font-size: 10px;
-    font-weight: 800;
-    color: var(--accent);
-  }
-  .mode-tab.active .mode-tab-icon-text {
-    color: #04201d;
-  }
-  .mode-tabs.icons-collapsed .mode-tab-icon {
-    height: 0;
-    opacity: 0;
-    margin-bottom: 0;
   }
   .mode-tab.active {
     background: var(--accent);
@@ -452,16 +427,15 @@
   .portfolio-total-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 4px;
   }
   .portfolio-total {
     font-size: 28px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
   }
-  .portfolio-chevron {
-    font-size: 22px;
-    font-weight: 700;
+  .portfolio-chevron-icon {
+    flex: 0 0 auto;
     color: var(--ink-sub);
   }
   .portfolio-pnl {
@@ -475,32 +449,33 @@
   .add-holding-link {
     display: inline-block;
     margin-top: 12px;
-    font-size: 13px;
+    font-size: 14.5px;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--ink);
     cursor: pointer;
   }
   .add-holding-link-centered {
     display: block;
     margin-top: 16px;
     text-align: center;
-    font-size: 13.5px;
+    font-size: 15px;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--ink);
     cursor: pointer;
   }
   .home-section-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 0 4px;
     margin-bottom: 10px;
   }
   .home-section-title {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 800;
   }
   .home-edit-link {
-    font-size: 13.5px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--ink-sub);
     cursor: pointer;
@@ -521,7 +496,6 @@
     cursor: pointer;
   }
   .holding-row {
-    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -536,23 +510,8 @@
   .holding-row:hover {
     background: #1a1d22;
   }
-  .holding-edit-list {
-    padding-top: 10px;
-  }
-  .holding-row.holding-row-edit {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    margin-bottom: 10px;
-  }
-  .holding-row.holding-row-edit:last-child {
-    margin-bottom: 0;
-    border-bottom: 1px solid var(--line);
-  }
   .holding-remove-btn {
-    position: absolute;
-    top: -8px;
-    left: -8px;
+    flex: 0 0 auto;
     width: 22px;
     height: 22px;
     border: none;
@@ -565,7 +524,6 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 2;
   }
   .holding-info {
     flex: 1;
@@ -1090,12 +1048,12 @@
       </div>
       <div class="mode-tabs-wrap">
         <div class="mode-tabs" id="modeTabs">
-          <button type="button" class="mode-tab active" data-mode="watchlist"><span class="mode-tab-icon">❤️</span><span class="mode-tab-label">관심종목</span></button>
-          <button type="button" class="mode-tab" data-mode="domestic"><span class="mode-tab-icon">🇰🇷</span><span class="mode-tab-label">국내주식</span></button>
-          <button type="button" class="mode-tab" data-mode="us"><span class="mode-tab-icon">🇺🇸</span><span class="mode-tab-label">미국주식</span></button>
-          <button type="button" class="mode-tab" data-mode="leverage"><span class="mode-tab-icon mode-tab-icon-text">2X</span><span class="mode-tab-label">레버리지</span></button>
-          <button type="button" class="mode-tab" data-mode="crypto"><span class="mode-tab-icon">🪙</span><span class="mode-tab-label">가상화폐</span></button>
-          <button type="button" class="mode-tab" data-mode="index"><span class="mode-tab-icon">🥇</span><span class="mode-tab-label">지수·원자재</span></button>
+          <button type="button" class="mode-tab active" data-mode="watchlist">관심종목</button>
+          <button type="button" class="mode-tab" data-mode="domestic">국내주식</button>
+          <button type="button" class="mode-tab" data-mode="us">미국주식</button>
+          <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
+          <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
+          <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
         </div>
         <div class="tabs-fade tabs-fade-left" id="tabsFadeLeft"></div>
         <div class="tabs-fade tabs-fade-right" id="tabsFadeRight"></div>
@@ -1269,10 +1227,11 @@
             <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
           </div>
         </div>
-        <button type="button" class="chart-close" id="portfolioDetailClose" aria-label="닫기">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="6" y1="6" x2="18" y2="18" />
-            <line x1="18" y1="6" x2="6" y2="18" />
+      </div>
+      <div class="chart-symbol-row">
+        <button type="button" class="chart-close" id="portfolioDetailClose" aria-label="뒤로">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
       </div>
@@ -1715,7 +1674,9 @@
         <div class="portfolio-label">내 투자</div>
         <div class="portfolio-total-row">
           <div class="portfolio-total">${formatNativeAmount(totalValueNative)}</div>
-          <div class="portfolio-chevron">›</div>
+          <svg class="portfolio-chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
         </div>
         ${
           holdings.length
@@ -1821,7 +1782,7 @@
     const pnlCls = s.pnlNative > 0 ? 'up' : s.pnlNative < 0 ? 'down' : '';
     const pnlSign = s.pnlNative > 0 ? '+' : s.pnlNative < 0 ? '-' : '';
     return `
-      <div class="holding-row ${editMode ? 'holding-row-edit' : ''}" data-symbol="${h.symbol}" data-cat="${h.cat}">
+      <div class="holding-row" data-symbol="${h.symbol}" data-cat="${h.cat}">
         ${editMode ? `<button type="button" class="holding-remove-btn" data-remove="${h.symbol}">×</button>` : ''}
         <div class="holding-info">
           <div class="holding-name">${name}</div>
@@ -1864,7 +1825,7 @@
           <div class="home-section-title">보유 종목</div>
           <div class="home-edit-link" id="portfolioEditLink">${portfolioEditMode ? '완료' : '편집'}</div>
         </div>
-        <div class="${portfolioEditMode ? 'holding-edit-list' : 'list'}">
+        <div class="list">
           ${rowsHtml}
         </div>
       </div>
@@ -2420,7 +2381,6 @@
     const { scrollLeft, scrollWidth, clientWidth } = modeTabsEl;
     tabsFadeLeftEl.classList.toggle('show', scrollLeft > 4);
     tabsFadeRightEl.classList.toggle('show', scrollLeft < scrollWidth - clientWidth - 4);
-    modeTabsEl.classList.toggle('icons-collapsed', scrollLeft > 4);
   }
   modeTabsEl.addEventListener('scroll', updateTabsFade);
   window.addEventListener('resize', updateTabsFade);
@@ -3162,6 +3122,7 @@
 
   attachSwipeBack(chartOverlay, closeChart, '.chart-canvas-wrap');
   attachSwipeBack(newsDetailPageEl, closeNewsDetail, null);
+  attachSwipeBack(portfolioDetailPageEl, closePortfolioDetail, null);
 
   if ('serviceWorker' in navigator) {
     let refreshing = false;
