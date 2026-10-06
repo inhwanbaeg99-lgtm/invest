@@ -1121,11 +1121,16 @@
     overflow-y: auto;
   }
   .dca-page-header {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
   .dca-page-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     text-align: center;
   }
   .dca-page-symbol {
@@ -2850,6 +2855,7 @@
 
   /* ---------- Chart modal ---------- */
   const wrapEl = document.querySelector('.wrap');
+  const chartInnerEl = document.querySelector('.chart-inner');
   const chartOverlay = document.getElementById('chartOverlay');
   const chartClose = document.getElementById('chartClose');
   const chartSymbolEl = document.getElementById('chartSymbol');
@@ -3407,19 +3413,34 @@
     dcaPageEl.classList.remove('open');
   }
 
+  // The caret sits right before the unit character (원/주), not after the
+  // whole number+unit block -- so every field is split into a number part
+  // and a unit part, each independently tappable (same data-field) with the
+  // caret dropped in between when that field is the active one.
   function renderDcaSentence(priceNative) {
-    const priceDisplay = formatNativeAmount(priceNative);
+    const caret = '<span class="dca-caret"></span>';
     if (dcaMode === 'qty') {
+      const priceCaret = dcaActiveField === 'price' ? caret : '';
+      let priceHtml;
+      if (currency === 'KRW') {
+        const priceNum = Math.round(priceNative).toLocaleString('ko-KR');
+        priceHtml = `<span class="dca-field-tap" data-field="price">${priceNum}</span>${priceCaret}<span class="dca-field-tap" data-field="price">원</span>`;
+      } else {
+        // USD prices lead with "$" (no trailing unit to anchor the caret
+        // before), so it just sits after the whole formatted number here.
+        priceHtml = `<span class="dca-field-tap" data-field="price">${formatNativeAmount(priceNative)}</span>${priceCaret}`;
+      }
+      const qtyCaret = dcaActiveField === 'qty' ? caret : '';
       const qtyDisplay = dcaRawDigits ? Number(dcaRawDigits).toLocaleString('ko-KR') : '';
       dcaSentenceEl.innerHTML = `
-        <div class="dca-sentence-line"><span class="dca-field-tap" data-field="price">${priceDisplay}</span>${dcaActiveField === 'price' ? '<span class="dca-caret"></span>' : ''}<span class="dca-dim">으로</span></div>
-        <div class="dca-sentence-line"><span class="dca-field-tap" data-field="qty">${qtyDisplay}주</span>${dcaActiveField === 'qty' ? '<span class="dca-caret"></span>' : ''}<span class="dca-dim"> 더 구매하면</span></div>
+        <div class="dca-sentence-line">${priceHtml}<span class="dca-dim">으로</span></div>
+        <div class="dca-sentence-line"><span class="dca-field-tap" data-field="qty">${qtyDisplay}</span>${qtyCaret}<span class="dca-field-tap" data-field="qty">주</span><span class="dca-dim"> 더 구매하면</span></div>
       `;
     } else {
       const amtDisplay = dcaRawDigits ? Number(dcaRawDigits).toLocaleString('ko-KR') : '';
       const unit = currency === 'KRW' ? '원' : '달러';
       dcaSentenceEl.innerHTML = `
-        <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap" data-field="amount">${amtDisplay}${unit}</span><span class="dca-caret"></span></div>
+        <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap" data-field="amount">${amtDisplay}</span>${caret}<span class="dca-field-tap" data-field="amount">${unit}</span></div>
         <div class="dca-sentence-line"><span class="dca-dim">더 구매하면</span></div>
       `;
     }
@@ -3520,7 +3541,7 @@
     renderDcaPage();
   });
   dcaApplyBtn.addEventListener('click', applyDca);
-  attachSwipeBack(dcaPageEl, closeDcaPage, null);
+  attachSwipeBack(dcaPageEl, closeDcaPage, null, chartInnerEl);
 
   function closeChart() {
     chartOverlay.classList.remove('open');
@@ -3702,16 +3723,21 @@
     loadChart();
   });
 
-  function resetWrapTransform() {
-    wrapEl.style.transition = 'none';
-    wrapEl.style.transform = '';
+  function resetBehindTransform(behindEl) {
+    behindEl.style.transition = 'none';
+    behindEl.style.transform = '';
   }
 
   // Shared edge-swipe-to-close gesture: the overlay follows the finger and
   // the page underneath parallaxes in, same as a native back transition.
   // excludeSelector lets a specific child area (e.g. the chart canvas, which
   // has its own horizontal drag-to-scrub gesture) opt out of starting a swipe.
-  function attachSwipeBack(overlayEl, closeFn, excludeSelector) {
+  // behindEl is whatever visually sits "under" this overlay -- the home wrap
+  // for a top-level page, but a parent overlay's own inner content (e.g.
+  // chart-inner, for the DCA page stacked on top of the chart) when this
+  // overlay was opened from within another one.
+  function attachSwipeBack(overlayEl, closeFn, excludeSelector, behindEl) {
+    behindEl = behindEl || wrapEl;
     let swipeX = 0;
     let swipeY = 0;
     let swipeStart = 0;
@@ -3742,13 +3768,13 @@
           return;
         }
         dragging = true;
-        wrapEl.style.transition = 'none';
+        behindEl.style.transition = 'none';
       }
       e.preventDefault();
       overlayEl.style.transform = `translateX(${dx}px)`;
       const progress = Math.min(Math.abs(dx) / window.innerWidth, 1);
       const dir = dx > 0 ? 1 : -1;
-      wrapEl.style.transform = `translateX(${-dir * (1 - progress) * 30}%)`;
+      behindEl.style.transform = `translateX(${-dir * (1 - progress) * 30}%)`;
     }, { passive: false });
 
     overlayEl.addEventListener('touchend', (e) => {
@@ -3759,21 +3785,21 @@
       const elapsed = Date.now() - swipeStart;
       const velocity = Math.abs(dx) / Math.max(elapsed, 1);
       overlayEl.style.transition = 'transform 0.25s ease';
-      wrapEl.style.transition = 'transform 0.25s ease';
+      behindEl.style.transition = 'transform 0.25s ease';
       if (dragging && Math.abs(dx) > Math.abs(dy) && (Math.abs(dx) > 90 || velocity > 0.5)) {
         const dir = dx > 0 ? 1 : -1;
         overlayEl.style.transform = `translateX(${dir * 100}%)`;
-        wrapEl.style.transform = 'translateX(0)';
+        behindEl.style.transform = 'translateX(0)';
         setTimeout(() => {
           closeFn();
           overlayEl.style.transition = 'none';
           overlayEl.style.transform = '';
-          resetWrapTransform();
+          resetBehindTransform(behindEl);
         }, 250);
       } else {
         overlayEl.style.transform = 'translateX(0)';
-        wrapEl.style.transform = 'translateX(0)';
-        if (dragging) setTimeout(resetWrapTransform, 250);
+        behindEl.style.transform = 'translateX(0)';
+        if (dragging) setTimeout(() => resetBehindTransform(behindEl), 250);
       }
       dragging = false;
     }, { passive: true });
