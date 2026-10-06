@@ -1238,6 +1238,97 @@
     font-weight: 700;
     cursor: pointer;
   }
+  .comment-preview-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .comment-preview-text {
+    font-size: 15px;
+    line-height: 1.45;
+    padding-top: 4px;
+    word-break: break-word;
+  }
+  #communityPage {
+    z-index: 119;
+  }
+  #communityWritePage {
+    z-index: 120;
+  }
+  .community-sort-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 20px;
+    margin-bottom: 4px;
+    flex: 0 0 auto;
+  }
+  .community-sort-btn {
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink-sub);
+    padding: 6px 0;
+    cursor: pointer;
+  }
+  .community-sort-btn.active {
+    color: var(--ink);
+  }
+  .community-compose-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+  .community-compose-placeholder {
+    font-size: 14px;
+    color: var(--ink-sub);
+  }
+  .community-write-submit {
+    flex: 0 0 auto;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .community-write-submit:disabled {
+    color: var(--ink-sub);
+    cursor: default;
+  }
+  .community-write-breadcrumb {
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--ink-sub);
+    flex: 0 0 auto;
+  }
+  .community-write-textarea {
+    flex: 1;
+    margin-top: 14px;
+    border: none;
+    background: none;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 17px;
+    line-height: 1.5;
+    resize: none;
+    min-height: 200px;
+  }
+  .community-write-textarea:focus {
+    outline: none;
+  }
+  .community-write-textarea::placeholder {
+    color: var(--ink-sub);
+  }
   .chart-stat-row {
     display: flex;
     align-items: flex-start;
@@ -1569,6 +1660,51 @@
           <div id="chartCommunityBody"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="add-holding-page" id="communityPage">
+    <div class="add-holding-inner">
+      <div class="add-holding-header dca-page-header">
+        <button type="button" class="chart-close" id="communityBack" aria-label="뒤로">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <div class="dca-page-title">
+          <div class="dca-page-symbol" id="communityHeaderSymbol"></div>
+          <div class="dca-page-price" id="communityHeaderPrice"></div>
+        </div>
+        <button type="button" class="chart-heart-btn" id="communityHeartBtn" aria-label="관심종목">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s-6.7-4.3-9.3-8.7C.9 9 1.8 5.2 5 3.8c2.3-1 4.7 0 7 2.7 2.3-2.7 4.7-3.7 7-2.7 3.2 1.4 4.1 5.2 2.3 8.5C18.7 16.7 12 21 12 21z" />
+          </svg>
+        </button>
+      </div>
+      <div class="community-sort-row" id="communitySortRow">
+        <button type="button" class="community-sort-btn active" data-sort="likes">인기순</button>
+        <button type="button" class="community-sort-btn" data-sort="recent">최신순</button>
+      </div>
+      <div id="communityFullList"></div>
+      <div class="community-compose-bar" id="communityComposeBar">
+        <div id="communityComposeAvatar"></div>
+        <div class="community-compose-placeholder">무슨 생각을 하고 있나요?</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="add-holding-page" id="communityWritePage">
+    <div class="add-holding-inner">
+      <div class="add-holding-header">
+        <button type="button" class="chart-close" id="communityWriteBack" aria-label="뒤로">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <button type="button" class="community-write-submit" id="communityWriteSubmit">남기기</button>
+      </div>
+      <div class="community-write-breadcrumb" id="communityWriteBreadcrumb"></div>
+      <textarea class="community-write-textarea" id="communityWriteTextarea" placeholder="내용을 입력해주세요" maxlength="500"></textarea>
     </div>
   </div>
 
@@ -3228,6 +3364,21 @@
   const chartMyHoldingSectionEl = document.getElementById('chartMyHoldingSection');
   const chartMyHoldingListEl = document.getElementById('chartMyHoldingList');
   const chartCommunityBodyEl = document.getElementById('chartCommunityBody');
+  const communityPageEl = document.getElementById('communityPage');
+  const communityBackEl = document.getElementById('communityBack');
+  const communityHeaderSymbolEl = document.getElementById('communityHeaderSymbol');
+  const communityHeaderPriceEl = document.getElementById('communityHeaderPrice');
+  const communityHeartBtn = document.getElementById('communityHeartBtn');
+  const communitySortRowEl = document.getElementById('communitySortRow');
+  const communityFullListEl = document.getElementById('communityFullList');
+  const communityComposeBarEl = document.getElementById('communityComposeBar');
+  const communityComposeAvatarEl = document.getElementById('communityComposeAvatar');
+  const communityWritePageEl = document.getElementById('communityWritePage');
+  const communityWriteBackEl = document.getElementById('communityWriteBack');
+  const communityWriteSubmitEl = document.getElementById('communityWriteSubmit');
+  const communityWriteBreadcrumbEl = document.getElementById('communityWriteBreadcrumb');
+  const communityWriteTextareaEl = document.getElementById('communityWriteTextarea');
+  const communityPageInnerEl = communityPageEl.querySelector('.add-holding-inner');
   const chartDcaBtn = document.getElementById('chartDcaBtn');
   const dcaPageEl = document.getElementById('dcaPage');
   const dcaCloseEl = document.getElementById('dcaClose');
@@ -3740,8 +3891,16 @@
   }
 
   let chartCommunityComments = [];
-  let chartCommunityExpanded = false;
   let chartCommunityLoadedFor = null;
+  let communitySort = 'likes';
+
+  function sortedCommunityComments() {
+    const list = [...chartCommunityComments];
+    if (communitySort === 'recent') {
+      return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+    return list.sort((a, b) => b.likeCount - a.likeCount || new Date(b.created_at) - new Date(a.created_at));
+  }
 
   async function loadChartCommunity() {
     if (!currentSymbol || (!currentUser && !DEV_SKIP_LOGIN_GATE)) return;
@@ -3761,12 +3920,27 @@
       }));
       chartCommunityLoadedFor = symbol;
       renderChartCommunity();
+      if (communityPageEl.classList.contains('open')) renderCommunityFullList();
     } catch (e) {
       chartCommunityComments = [];
     }
   }
 
-  function commentRowHtml(c) {
+  // Compact preview used on the chart page -- just the avatar and text, no
+  // author/actions (matches the "card" look, not the full list row).
+  function commentPreviewHtml(c) {
+    const avatar = c.author_avatar
+      ? `<img class="avatar-img" src="${escapeHtml(c.author_avatar)}" alt="" />`
+      : `<div class="avatar-fallback">${escapeHtml((c.author_name || '?').charAt(0).toUpperCase())}</div>`;
+    return `
+      <div class="comment-preview-row">
+        ${avatar}
+        <div class="comment-preview-text">${escapeHtml(c.content)}</div>
+      </div>
+    `;
+  }
+
+  function commentFullRowHtml(c) {
     const avatar = c.author_avatar
       ? `<img class="avatar-img" src="${escapeHtml(c.author_avatar)}" alt="" />`
       : `<div class="avatar-fallback">${escapeHtml((c.author_name || '?').charAt(0).toUpperCase())}</div>`;
@@ -3787,6 +3961,7 @@
     `;
   }
 
+  // Chart page: title + top comment only + a link into the full community page.
   function renderChartCommunity() {
     if (!currentUser && !DEV_SKIP_LOGIN_GATE) {
       chartCommunityBodyEl.innerHTML = loginGateHtml('로그인하면 종목별 커뮤니티를 볼 수 있어요');
@@ -3797,63 +3972,76 @@
       loadChartCommunity();
       return;
     }
-    const sorted = [...chartCommunityComments].sort((a, b) => b.likeCount - a.likeCount || new Date(b.created_at) - new Date(a.created_at));
-    const shown = chartCommunityExpanded ? sorted : sorted.slice(0, 1);
-    const listHtml = shown.length
-      ? shown.map(commentRowHtml).join('')
+    const sorted = sortedCommunityComments();
+    const top = sorted[0];
+    const previewHtml = top
+      ? commentPreviewHtml(top)
       : '<div class="empty">아직 의견이 없어요. 첫 의견을 남겨보세요.</div>';
-    const moreHtml =
-      !chartCommunityExpanded && sorted.length > 1
-        ? `<div class="community-more-link" id="chartCommunityMoreLink">인기 의견 더보기 (${sorted.length - 1}) ›</div>`
-        : '';
+    const moreLabel = sorted.length ? `인기 의견 더보기 (${sorted.length}) ›` : '커뮤니티 바로가기 ›';
     chartCommunityBodyEl.innerHTML = `
-      ${listHtml}
-      ${moreHtml}
-      <div class="community-compose">
-        <input type="text" id="chartCommunityInput" placeholder="의견을 남겨보세요" maxlength="300" />
-        <button type="button" id="chartCommunitySubmit">작성</button>
-      </div>
+      ${previewHtml}
+      <div class="community-more-link" id="chartCommunityMoreLink">${moreLabel}</div>
     `;
   }
 
-  async function submitChartComment() {
-    const input = document.getElementById('chartCommunityInput');
-    const content = input.value.trim();
-    if (!content || !currentUser || !currentSymbol) return;
-    const symbol = currentSymbol;
-    input.disabled = true;
-    try {
-      const { error } = await sb.from('comments').insert({
-        symbol,
-        user_id: currentUser.id,
-        author_name: userDisplayName(currentUser),
-        author_avatar: userAvatarUrl(currentUser),
-        content,
-      });
-      if (error) throw error;
-      input.value = '';
-      await loadChartCommunity();
-    } catch (e) {
-      alert('의견 작성에 실패했어요. 다시 시도해주세요.');
-    } finally {
-      input.disabled = false;
-    }
-  }
-
-  chartCommunityBodyEl.addEventListener('click', async (e) => {
+  chartCommunityBodyEl.addEventListener('click', (e) => {
     if (e.target.closest('[data-action="kakao-login"]')) {
       kakaoLogin();
       return;
     }
     if (e.target.id === 'chartCommunityMoreLink') {
-      chartCommunityExpanded = true;
-      renderChartCommunity();
+      openCommunityPage();
+    }
+  });
+
+  function openCommunityPage() {
+    if (!currentSymbol) return;
+    communitySort = 'likes';
+    communitySortRowEl.querySelectorAll('.community-sort-btn').forEach((b) => b.classList.toggle('active', b.dataset.sort === 'likes'));
+    communityHeaderSymbolEl.textContent = displayName(currentSymbol);
+    refreshCommunityHeaderPrice();
+    communityComposeAvatarEl.innerHTML = avatarHtml(currentUser);
+    communityPageEl.classList.add('open');
+    updateChartHeart();
+    renderCommunityFullList();
+  }
+
+  function closeCommunityPage() {
+    communityPageEl.classList.remove('open');
+  }
+
+  function refreshCommunityHeaderPrice() {
+    const t = findTicker(currentSymbol);
+    if (!t) {
+      communityHeaderPriceEl.innerHTML = '';
       return;
     }
-    if (e.target.id === 'chartCommunitySubmit') {
-      submitChartComment();
+    const changePct = sessionAnchoredChangePct(currentSymbol, currentCat, Number(t.lastPrice), Number(t.priceChangePercent));
+    const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
+    const sign = changePct > 0 ? '+' : '';
+    communityHeaderPriceEl.innerHTML = `${formatPrice(t.lastPrice)} <span class="${cls}">${sign}${changePct.toFixed(2)}%</span>`;
+  }
+
+  function renderCommunityFullList() {
+    if (!currentUser && !DEV_SKIP_LOGIN_GATE) {
+      communityFullListEl.innerHTML = loginGateHtml('로그인하면 종목별 커뮤니티를 볼 수 있어요');
       return;
     }
+    const sorted = sortedCommunityComments();
+    communityFullListEl.innerHTML = sorted.length
+      ? sorted.map(commentFullRowHtml).join('')
+      : '<div class="empty">아직 의견이 없어요. 첫 의견을 남겨보세요.</div>';
+  }
+
+  communitySortRowEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.community-sort-btn');
+    if (!btn || btn.dataset.sort === communitySort) return;
+    communitySort = btn.dataset.sort;
+    communitySortRowEl.querySelectorAll('.community-sort-btn').forEach((b) => b.classList.toggle('active', b === btn));
+    renderCommunityFullList();
+  });
+
+  communityFullListEl.addEventListener('click', async (e) => {
     const likeBtn = e.target.closest('[data-action="like"]');
     if (likeBtn) {
       if (!currentUser) return;
@@ -3881,9 +4069,56 @@
       await loadChartCommunity();
     }
   });
-  chartCommunityBodyEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.id === 'chartCommunityInput') submitChartComment();
+
+  communityBackEl.addEventListener('click', closeCommunityPage);
+  communityHeartBtn.addEventListener('click', () => toggleWatchlistHeart());
+  communityComposeBarEl.addEventListener('click', openCommunityWritePage);
+
+  function openCommunityWritePage() {
+    if (!currentUser && !DEV_SKIP_LOGIN_GATE) {
+      kakaoLogin();
+      return;
+    }
+    communityWriteBreadcrumbEl.textContent = `${userDisplayName(currentUser) || '나'} › ${displayName(currentSymbol || '')}`;
+    communityWriteTextareaEl.value = '';
+    communityWriteSubmitEl.disabled = true;
+    communityWritePageEl.classList.add('open');
+    communityWriteTextareaEl.focus();
+  }
+
+  function closeCommunityWritePage() {
+    communityWritePageEl.classList.remove('open');
+  }
+
+  communityWriteTextareaEl.addEventListener('input', () => {
+    communityWriteSubmitEl.disabled = !communityWriteTextareaEl.value.trim();
   });
+
+  communityWriteBackEl.addEventListener('click', closeCommunityWritePage);
+
+  async function submitCommunityWrite() {
+    const content = communityWriteTextareaEl.value.trim();
+    if (!content || !currentUser || !currentSymbol) return;
+    const symbol = currentSymbol;
+    communityWriteSubmitEl.disabled = true;
+    try {
+      const { error } = await sb.from('comments').insert({
+        symbol,
+        user_id: currentUser.id,
+        author_name: userDisplayName(currentUser),
+        author_avatar: userAvatarUrl(currentUser),
+        content,
+      });
+      if (error) throw error;
+      closeCommunityWritePage();
+      await loadChartCommunity();
+    } catch (e) {
+      alert('의견 작성에 실패했어요. 다시 시도해주세요.');
+      communityWriteSubmitEl.disabled = false;
+    }
+  }
+
+  communityWriteSubmitEl.addEventListener('click', submitCommunityWrite);
 
   // Live market price, used as the default basis for the hypothetical extra
   // purchase. The user can override it (dcaPriceDigits) to ask "what if I'd
@@ -4122,12 +4357,15 @@
     currentCat = null;
   }
 
+  // Shared by the chart page's heart and the community page's heart -- both
+  // show/toggle the same currentSymbol watchlist membership.
   function updateChartHeart() {
     const inWatchlist = currentSymbol != null && watchlist.some((w) => w.symbol === currentSymbol);
     chartHeartBtn.classList.toggle('active', inWatchlist);
+    communityHeartBtn.classList.toggle('active', inWatchlist);
   }
 
-  chartHeartBtn.addEventListener('click', () => {
+  function toggleWatchlistHeart() {
     if (!currentSymbol) return;
     const idx = watchlist.findIndex((w) => w.symbol === currentSymbol);
     if (idx >= 0) {
@@ -4139,7 +4377,9 @@
     }
     addToWatchlist(currentSymbol, currentCat);
     updateChartHeart();
-  });
+  }
+
+  chartHeartBtn.addEventListener('click', toggleWatchlistHeart);
 
   listEl.addEventListener('click', (e) => {
     if (e.target.closest('[data-action="kakao-login"]')) {
@@ -4418,6 +4658,8 @@
   attachSwipeBack(addHoldingPageEl, handleAddHoldingBack, null, portfolioDetailInnerEl);
   attachSwipeBack(searchPageEl, closeSearch, null);
   attachSwipeBack(addWatchlistPageEl, closeAddWatchlist, null);
+  attachSwipeBack(communityPageEl, closeCommunityPage, null, chartInnerEl);
+  attachSwipeBack(communityWritePageEl, closeCommunityWritePage, null, communityPageInnerEl);
 
   if ('serviceWorker' in navigator) {
     let refreshing = false;
