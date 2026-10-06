@@ -467,7 +467,7 @@
     margin-bottom: 10px;
   }
   .watchlist-section-header {
-    margin-top: 14px;
+    margin-top: 4px;
     margin-bottom: 2px;
   }
   .home-section-title {
@@ -741,15 +741,20 @@
     margin-top: 16px;
     flex: 0 0 auto;
   }
+  .add-holding-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
   .add-holding-selected {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 12px 16px;
-    margin-bottom: 8px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--line);
   }
   .add-holding-selected-name {
     font-size: 15px;
@@ -769,6 +774,9 @@
   }
   .add-holding-field {
     margin-bottom: 14px;
+  }
+  .add-holding-field:last-child {
+    margin-bottom: 0;
   }
   .add-holding-field label {
     display: block;
@@ -1391,7 +1399,13 @@
   <div class="add-holding-page" id="addHoldingPage">
     <div class="add-holding-inner">
       <div class="add-holding-header">
-        <div class="title">Tickr</div>
+        <div class="title-group">
+          <div class="title">Tickr</div>
+          <div class="currency-toggle" id="addHoldingCurrencyToggle">
+            <button type="button" class="currency-btn" data-currency="USD">$</button>
+            <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
+          </div>
+        </div>
         <button type="button" class="chart-close" id="addHoldingClose" aria-label="닫기">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -1408,28 +1422,30 @@
       </div>
       <div class="add-holding-results" id="addHoldingResults"></div>
       <div class="add-holding-form" id="addHoldingForm" hidden>
-        <div class="add-holding-selected">
-          <div>
-            <div class="add-holding-selected-name" id="addHoldingSelectedName"></div>
-            <div class="add-holding-selected-kr" id="addHoldingSelectedKr"></div>
+        <div class="add-holding-card">
+          <div class="add-holding-selected">
+            <div>
+              <div class="add-holding-selected-name" id="addHoldingSelectedName"></div>
+              <div class="add-holding-selected-kr" id="addHoldingSelectedKr"></div>
+            </div>
+            <div>
+              <div class="price" id="addHoldingSelectedPrice"></div>
+              <div class="change" id="addHoldingSelectedChange"></div>
+            </div>
           </div>
-          <div>
-            <div class="price" id="addHoldingSelectedPrice"></div>
-            <div class="change" id="addHoldingSelectedChange"></div>
+          <div class="add-holding-change-btn" id="addHoldingChangeBtn">종목 변경</div>
+          <div class="add-holding-field">
+            <label for="addHoldingQty">수량</label>
+            <input type="text" inputmode="decimal" id="addHoldingQty" placeholder="10 주" />
           </div>
-        </div>
-        <div class="add-holding-change-btn" id="addHoldingChangeBtn">종목 변경</div>
-        <div class="add-holding-field">
-          <label for="addHoldingQty">수량</label>
-          <input type="text" inputmode="decimal" id="addHoldingQty" placeholder="10 주" />
-        </div>
-        <div class="add-holding-field">
-          <label for="addHoldingAvgPriceKrw">평균 매입가 (원)</label>
-          <input type="text" inputmode="decimal" id="addHoldingAvgPriceKrw" placeholder="21,874원" />
-        </div>
-        <div class="add-holding-field">
-          <label for="addHoldingAvgPriceUsd">평균 매입가 (달러)</label>
-          <input type="text" inputmode="decimal" id="addHoldingAvgPriceUsd" placeholder="$16.22" />
+          <div class="add-holding-field">
+            <label for="addHoldingAvgPriceKrw">평균 매입가 (원)</label>
+            <input type="text" inputmode="decimal" id="addHoldingAvgPriceKrw" placeholder="21,874원" />
+          </div>
+          <div class="add-holding-field">
+            <label for="addHoldingAvgPriceUsd">평균 매입가 (달러)</label>
+            <input type="text" inputmode="decimal" id="addHoldingAvgPriceUsd" placeholder="$16.22" />
+          </div>
         </div>
         <button type="button" class="add-holding-submit" id="addHoldingSubmit">담기</button>
       </div>
@@ -2495,14 +2511,12 @@
       : '<div class="empty">검색 결과가 없습니다</div>';
   }
 
-  function selectAddHoldingSymbol(symbol, cat) {
-    addHoldingSelected = { symbol, cat };
-    const name = displayName(symbol);
-    const kr = krName(name, cat);
-    addHoldingSelectedName.textContent = name;
-    addHoldingSelectedKr.textContent = kr || CATEGORY_LABELS[cat];
-
-    const t = findTicker(symbol);
+  // Re-renders just the selected stock's live price/change -- called on currency
+  // toggle too, so it must never touch the qty/avg-price inputs (would blow away
+  // whatever the user is mid-typing).
+  function refreshAddHoldingSelectedPrice() {
+    if (!addHoldingSelected) return;
+    const t = findTicker(addHoldingSelected.symbol);
     if (t) {
       const changePct = Number(t.priceChangePercent);
       const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
@@ -2514,6 +2528,16 @@
       addHoldingSelectedPriceEl.textContent = '';
       addHoldingSelectedChangeEl.textContent = '';
     }
+  }
+
+  function selectAddHoldingSymbol(symbol, cat) {
+    addHoldingSelected = { symbol, cat };
+    const name = displayName(symbol);
+    const kr = krName(name, cat);
+    addHoldingSelectedName.textContent = name;
+    addHoldingSelectedKr.textContent = kr || CATEGORY_LABELS[cat];
+
+    refreshAddHoldingSelectedPrice();
 
     const existing = holdings.find((h) => h.symbol === symbol);
     addHoldingQtyInput.value = existing ? formatMaskedValue(String(existing.qty), { suffix: ' 주', decimals: 8 }) : '';
@@ -2523,6 +2547,11 @@
     addHoldingAvgPriceUsdInput.value = existing
       ? formatMaskedValue(String(existing.avgPriceUsd), { prefix: '$', decimals: 2 })
       : '';
+    // An existing holding already has two independently-entered prices -- treat
+    // both as "dirty" so editing one doesn't silently overwrite the other via
+    // FX auto-fill. A blank form starts clean so the first field typed drives it.
+    avgPriceKrwDirty = !!existing;
+    avgPriceUsdDirty = !!existing;
 
     addHoldingSearchRowEl.style.display = 'none';
     addHoldingResultsEl.style.display = 'none';
@@ -2736,6 +2765,7 @@
     }
     if (searchOpen) performGlobalSearch(searchInputEl.value);
     if (portfolioDetailPageEl.classList.contains('open')) renderPortfolioDetail();
+    if (addHoldingPageEl.classList.contains('open')) refreshAddHoldingSelectedPrice();
   }
 
   currencyToggleEls.forEach((group) => {
@@ -3422,6 +3452,7 @@
     if (removeBtn) {
       watchlist = watchlist.filter((w) => w.symbol !== removeBtn.dataset.remove);
       saveWatchlist();
+      if (!watchlist.length) watchlistTabEditMode = false;
       renderWatchlistTab();
       return;
     }
@@ -3448,6 +3479,7 @@
     if (removeBtn) {
       holdings = holdings.filter((h) => h.symbol !== removeBtn.dataset.remove);
       saveHoldings();
+      if (!holdings.length) portfolioEditMode = false;
       renderPortfolioDetail();
       return;
     }
@@ -3485,6 +3517,24 @@
   attachMaskedNumberInput(addHoldingQtyInput, { suffix: ' 주', decimals: 8 });
   attachMaskedNumberInput(addHoldingAvgPriceKrwInput, { suffix: '원', decimals: 0 });
   attachMaskedNumberInput(addHoldingAvgPriceUsdInput, { prefix: '$', decimals: 2 });
+
+  // Only one of 원/달러 avg-price fields needs to be typed -- the other auto-fills
+  // from today's FX rate, as long as the user hasn't typed their own value into
+  // it (tracked via the *Dirty flags, which freeze once a field is hand-edited).
+  let avgPriceKrwDirty = false;
+  let avgPriceUsdDirty = false;
+  addHoldingAvgPriceKrwInput.addEventListener('input', () => {
+    avgPriceKrwDirty = addHoldingAvgPriceKrwInput.value.trim() !== '';
+    if (!avgPriceKrwDirty || avgPriceUsdDirty || !krwRate) return;
+    const krw = parseMaskedNumber(addHoldingAvgPriceKrwInput.value);
+    addHoldingAvgPriceUsdInput.value = krw ? formatMaskedValue((krw / krwRate).toFixed(2), { prefix: '$', decimals: 2 }) : '';
+  });
+  addHoldingAvgPriceUsdInput.addEventListener('input', () => {
+    avgPriceUsdDirty = addHoldingAvgPriceUsdInput.value.trim() !== '';
+    if (!avgPriceUsdDirty || avgPriceKrwDirty || !krwRate) return;
+    const usd = parseMaskedNumber(addHoldingAvgPriceUsdInput.value);
+    addHoldingAvgPriceKrwInput.value = usd ? formatMaskedValue(String(Math.round(usd * krwRate)), { suffix: '원', decimals: 0 }) : '';
+  });
 
   addHoldingSubmitBtn.addEventListener('click', () => {
     if (!addHoldingSelected) return;
