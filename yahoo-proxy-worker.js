@@ -18,10 +18,6 @@
 // RSS/Atom usage: GET https://<your-worker>.workers.dev/rss?url=<encoded feed url>
 // Response: the raw XML, passed through with CORS enabled. Restricted to a
 // domain whitelist below -- this is NOT an open proxy.
-//
-// DART usage: GET https://<your-worker>.workers.dev/dart?bgn_de=20250101&end_de=20250107
-// Response: passthrough of OpenDART's /api/list.json (공시검색) JSON.
-// Requires a DART_KEY secret (발급: https://opendart.fss.or.kr).
 
 export default {
   async fetch(request, env) {
@@ -37,10 +33,6 @@ export default {
 
     if (url.pathname === '/rss') {
       return rssProxy(url);
-    }
-
-    if (url.pathname === '/dart') {
-      return dartProxy(url, env);
     }
 
     const symbolsParam = url.searchParams.get('symbols') || url.searchParams.get('symbol') || '';
@@ -116,7 +108,7 @@ async function newsProxy(url, env) {
 // Domains Tickr actually needs RSS/Atom feeds from. Keeping this an allowlist
 // (rather than fetching whatever `url` is given) stops the worker from being
 // usable as a general-purpose CORS-bypass proxy for arbitrary sites.
-const RSS_ALLOWED_HOSTS = ['www.prnewswire.com', 'www.globenewswire.com', 'www.sec.gov'];
+const RSS_ALLOWED_HOSTS = ['www.prnewswire.com', 'www.globenewswire.com', 'www.sec.gov', 'www.yna.co.kr'];
 
 async function rssProxy(url) {
   const target = url.searchParams.get('url');
@@ -149,41 +141,6 @@ async function rssProxy(url) {
     });
   } catch (e) {
     return json({ error: 'upstream fetch failed' }, 502);
-  }
-}
-
-async function dartProxy(url, env) {
-  if (!env.DART_KEY) {
-    return json({ error: 'DART_KEY secret not configured on this worker' }, 500);
-  }
-  const allowed = ['bgn_de', 'end_de', 'pblntf_ty', 'page_no', 'page_count', 'corp_code', 'last_reprt_at'];
-  const upstream = new URLSearchParams();
-  for (const key of allowed) {
-    const val = url.searchParams.get(key);
-    if (val) upstream.set(key, val);
-  }
-  if (!upstream.get('page_count')) upstream.set('page_count', '50');
-  upstream.set('crtfc_key', env.DART_KEY);
-  try {
-    const res = await fetch(`https://opendart.fss.or.kr/api/list.json?${upstream.toString()}`, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
-        Accept: 'application/json',
-      },
-      cf: { cacheTtl: 300, cacheEverything: true },
-    });
-    const text = await res.text();
-    try {
-      return json(JSON.parse(text), res.status);
-    } catch (parseErr) {
-      // surface the raw upstream body/status instead of swallowing it --
-      // a WAF/block page comes back as HTML, not JSON, and this is the only
-      // way to tell that apart from a real network failure below.
-      return json({ error: 'opendart response was not JSON', status: res.status, body: text.slice(0, 500) }, 502);
-    }
-  } catch (e) {
-    return json({ error: 'upstream fetch to opendart.fss.or.kr failed', detail: String(e) }, 502);
   }
 }
 

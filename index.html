@@ -2335,7 +2335,7 @@
     portfolioDetailPageEl.classList.remove('open');
   }
 
-  // 해외뉴스 상태 (PR Newswire만) / 한국뉴스 상태 (DART 공시 + 네이버 금융 키워드 검색) --
+  // 해외뉴스 상태 (PR Newswire만) / 한국뉴스 상태 (연합뉴스 경제+마켓+ RSS) --
   // 둘을 따로 로드/표시하므로 완전히 분리된 state 쌍으로 관리.
   let newsSubTab = 'kr'; // 'kr' | 'global'
   let newsItemsKr = null;
@@ -2346,12 +2346,18 @@
   // PR Newswire (company press releases) -- the primary-source "wire" feed
   // that often breaks before any journalist writes about it. Proxied through
   // the worker's /rss route (CORS).
-  const FEED_SOURCES = [
+  const GLOBAL_FEED_SOURCES = [
     {
       name: 'PR Newswire',
       url: 'https://www.prnewswire.com/rss/financial-services-latest-news/financial-services-latest-news-list.rss',
       format: 'rss',
     },
+  ];
+
+  // 연합뉴스 경제/마켓+(증시·금융) 공개 RSS -- 둘 다 이미 한국어라 번역 불필요.
+  const KR_FEED_SOURCES = [
+    { name: '연합뉴스 경제', url: 'https://www.yna.co.kr/rss/economy.xml', format: 'rss', lang: 'ko' },
+    { name: '연합뉴스 마켓+', url: 'https://www.yna.co.kr/rss/market.xml', format: 'rss', lang: 'ko' },
   ];
 
   function parseFeedXml(xmlText, format) {
@@ -2390,7 +2396,7 @@
             link: it.link,
             summary: it.summary,
             sourceName: src.name,
-            lang: 'en',
+            lang: src.lang || 'en',
             ts: new Date(it.dateStr).getTime(),
           };
         });
@@ -2420,41 +2426,12 @@
     return `${Math.floor(hours / 24)}일 전`;
   }
 
-  // OpenDART 공시검색 -- 상장사 정기/주요사항 공시는 성격상 전부 금융 관련이라
-  // 별도 키워드 필터링이 필요 없다. 최근 7일치를 최신순으로.
-  async function loadDartDisclosures() {
-    try {
-      const fmt = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-      const end = new Date();
-      const begin = new Date(end);
-      begin.setDate(begin.getDate() - 7);
-      const data = await fetchJson(
-        `${YAHOO_PROXY}dart?bgn_de=${fmt(begin)}&end_de=${fmt(end)}&page_count=50`,
-      );
-      if (data.status !== '000' || !data.list) return [];
-      return data.list.map((it) => {
-        const y = it.rcept_dt.slice(0, 4);
-        const m = it.rcept_dt.slice(4, 6);
-        const d = it.rcept_dt.slice(6, 8);
-        return {
-          title: `[${it.corp_name}] ${it.report_nm}`,
-          link: `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${it.rcept_no}`,
-          summary: '',
-          sourceName: 'DART 공시',
-          lang: 'ko',
-          ts: new Date(`${y}-${m}-${d}T09:00:00+09:00`).getTime(),
-        };
-      });
-    } catch (e) {
-      return [];
-    }
-  }
-
   async function loadNewsKr() {
     if (newsLoadingKr) return;
     newsLoadingKr = true;
     try {
-      const merged = await loadDartDisclosures();
+      const feedResults = await Promise.all(KR_FEED_SOURCES.map(loadFeedArticles));
+      const merged = feedResults.flat();
       if (merged.length) {
         merged.sort((a, b) => b.ts - a.ts);
         newsItemsKr = merged.slice(0, 50);
@@ -2471,7 +2448,7 @@
     if (newsLoadingGlobal) return;
     newsLoadingGlobal = true;
     try {
-      const feedResults = await Promise.all(FEED_SOURCES.map(loadFeedArticles));
+      const feedResults = await Promise.all(GLOBAL_FEED_SOURCES.map(loadFeedArticles));
       const merged = feedResults.flat();
       if (merged.length) {
         merged.sort((a, b) => b.ts - a.ts);
