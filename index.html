@@ -2446,6 +2446,27 @@
     };
   }
 
+  // Walks forward from `afterMs` to the next trading day's open (skipping the
+  // weekend) -- used once today's session has closed, to extend the 1D chart's
+  // time axis out to tomorrow's open instead of stopping dead at today's close.
+  function getNextSessionStart(cat, afterMs) {
+    const cfg = MARKET_HOURS[cat];
+    if (!cfg) return null;
+    for (let i = 1; i <= 4; i++) {
+      const probe = new Date(afterMs + i * 86400000);
+      const offsetMin = tzOffsetMinutes(probe, cfg.tz);
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: cfg.tz, hourCycle: 'h23', weekday: 'short',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(probe).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
+      const weekdayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
+      if (weekdayIdx === 0 || weekdayIdx === 6) continue;
+      const y = +parts.year, m = +parts.month, d = +parts.day;
+      return Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.openMin * 60000 - offsetMin * 60000;
+    }
+    return null;
+  }
+
   // "Since regular-session-open" change% for list rows, falling back to Binance's
   // rolling 24h priceChangePercent (crypto, or while the open print hasn't loaded yet).
   function sessionAnchoredChangePct(symbol, cat, lastPrice, fallbackPct) {
@@ -2557,9 +2578,20 @@
     ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Session still in progress -- mark the live point with a dot.
+    // Room left after the real data -- either the session is still in progress
+    // (tail runs to "now") or it's closed and the domain was stretched out to
+    // tomorrow's open (tail runs flat at today's close through the dead gap).
+    // Either way: gray tail line, live/close point marked with a dot.
     const lastPt = points[points.length - 1];
     if (timeDomain && lastPt[0] < w - 1) {
+      ctx.beginPath();
+      ctx.moveTo(lastPt[0], lastPt[1]);
+      ctx.lineTo(w, lastPt[1]);
+      ctx.strokeStyle = '#8a8f9880';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
       ctx.beginPath();
       ctx.arc(lastPt[0], lastPt[1], 4, 0, Math.PI * 2);
       ctx.fillStyle = color;
@@ -2708,6 +2740,13 @@
       chartTimes = times;
       chartRealStartIdx = realStartIdx;
       chartTimeDomain = session ? [session.start, session.fullEnd] : null;
+      if (session && Date.now() >= session.fullEnd) {
+        // Today's session is over -- stretch the axis out to tomorrow's open
+        // instead of stopping dead at today's close, so there's somewhere for
+        // the gray "market closed" tail to go.
+        const nextOpen = getNextSessionStart(currentCat, session.fullEnd);
+        if (nextOpen) chartTimeDomain = [session.start, nextOpen];
+      }
       // Same value the header %/sign is computed from, so the line's up/down
       // color can't disagree with the sign shown above it.
       chartRefValue = first;
