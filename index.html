@@ -466,6 +466,9 @@
     padding: 0 4px;
     margin-bottom: 10px;
   }
+  .watchlist-section-header {
+    margin-bottom: 4px;
+  }
   .home-section-title {
     font-size: 16px;
     font-weight: 800;
@@ -478,13 +481,14 @@
   }
   .watchlist-remove-btn {
     flex: 0 0 auto;
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     border: none;
     border-radius: 999px;
     background: var(--down);
     color: #fff;
-    font-size: 13px;
+    font-size: 17px;
     line-height: 1;
     display: flex;
     align-items: center;
@@ -508,13 +512,14 @@
   }
   .holding-remove-btn {
     flex: 0 0 auto;
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     border: none;
     border-radius: 999px;
     background: var(--down);
     color: #fff;
-    font-size: 13px;
+    font-size: 17px;
     line-height: 1;
     display: flex;
     align-items: center;
@@ -1649,15 +1654,15 @@
 
   function renderWatchlistTab() {
     const headerHtml = `
-      <div class="home-section-header">
-        <div class="home-section-title">관심종목</div>
+      <div class="home-section-header watchlist-section-header">
+        <div class="home-section-title"></div>
         ${watchlist.length ? `<div class="home-edit-link" id="watchlistTabEditLink">${watchlistTabEditMode ? '완료' : '편집'}</div>` : ''}
       </div>
     `;
     const addRowHtml = '<div class="holding-add-row" id="watchlistAddLink"><span class="holding-add-row-plus">+</span></div>';
     const present = watchlist.filter((w) => findTicker(w.symbol));
     if (!present.length) {
-      listEl.innerHTML = headerHtml + '<div class="empty">담은 종목이 없어요.</div>' + `<div class="list">${addRowHtml}</div>`;
+      listEl.innerHTML = headerHtml + `<div class="list">${addRowHtml}</div>`;
       return;
     }
 
