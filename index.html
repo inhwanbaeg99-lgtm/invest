@@ -1269,8 +1269,14 @@
     background: var(--panel);
   }
   .dca-keypad-back {
-    font-size: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--ink-sub);
+  }
+  .dca-keypad-back svg {
+    width: 24px;
+    height: 24px;
   }
   .dca-apply-btn {
     margin-top: 20px;
@@ -1483,7 +1489,12 @@
           <button type="button" class="dca-keypad-btn" data-key="9">9</button>
           <button type="button" class="dca-keypad-btn" data-key="00">00</button>
           <button type="button" class="dca-keypad-btn" data-key="0">0</button>
-          <button type="button" class="dca-keypad-btn dca-keypad-back" data-key="back" aria-label="지우기">⌫</button>
+          <button type="button" class="dca-keypad-btn dca-keypad-back" data-key="back" aria-label="지우기">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+          </button>
         </div>
         <button type="button" class="add-holding-submit dca-apply-btn" id="addHoldingSubmit">추가</button>
       </div>
@@ -2904,6 +2915,8 @@
       // meaningless once the currency changes, so start the fields over.
       dcaRawDigits = '';
       dcaPriceDigits = '';
+      dcaRawDigitsTouched = false;
+      dcaPriceDigitsTouched = false;
       renderDcaPage();
     }
   }
@@ -3439,12 +3452,12 @@
   }
 
   // Resolves the price actually used for the calculation: the user's custom
-  // override if they've typed one, otherwise today's live price. Always
-  // returns both currencies so applyDca can keep avgPriceKrw/avgPriceUsd
+  // override if they've touched that field, otherwise today's live price.
+  // Always returns both currencies so applyDca can keep avgPriceKrw/avgPriceUsd
   // consistent regardless of which currency the override was entered in.
   function getDcaPricePair() {
-    if (dcaPriceDigits) {
-      const native = Number(dcaPriceDigits);
+    if (dcaPriceDigitsTouched) {
+      const native = Number(dcaPriceDigits) || 0;
       return currency === 'KRW'
         ? { native, krw: native, usd: krwRate ? native / krwRate : 0 }
         : { native, usd: native, krw: krwRate ? native * krwRate : 0 };
@@ -3461,6 +3474,12 @@
   // dcaActiveField says which of the two the keypad currently types into.
   let dcaRawDigits = '';
   let dcaPriceDigits = '';
+  // Before either field is touched, it just displays a live value (example
+  // qty/amount, or today's market price) -- not a real typed value. Once the
+  // user presses any key (including delete) in that field, it switches to
+  // showing/using exactly what they've typed, even if that's now empty (0).
+  let dcaRawDigitsTouched = false;
+  let dcaPriceDigitsTouched = false;
   let dcaActiveField = 'qty';
 
   function updateDcaModeButtons() {
@@ -3475,6 +3494,8 @@
     dcaMode = 'qty';
     dcaRawDigits = '';
     dcaPriceDigits = '';
+    dcaRawDigitsTouched = false;
+    dcaPriceDigitsTouched = false;
     dcaActiveField = 'qty';
     updateDcaModeButtons();
     dcaPageSymbolEl.textContent = displayName(currentSymbol);
@@ -3504,16 +3525,14 @@
         priceHtml = `<span class="dca-field-tap" data-field="price">${formatNativeAmount(priceNative)}</span>${priceCaret}`;
       }
       const qtyCaret = dcaActiveField === 'qty' ? caret : '';
-      const qtyEmpty = !dcaRawDigits;
-      const qtyDisplay = qtyEmpty ? '10' : Number(dcaRawDigits).toLocaleString('ko-KR');
+      const qtyDisplay = dcaEffectiveRawInput().toLocaleString('ko-KR');
       dcaSentenceEl.innerHTML = `
         <div class="dca-sentence-line">${priceHtml}<span class="dca-dim">으로</span></div>
-        <div class="dca-sentence-line"><span class="dca-field-tap${qtyEmpty ? ' dca-placeholder' : ''}" data-field="qty">${qtyDisplay}</span>${qtyCaret}<span class="dca-field-tap" data-field="qty">주</span><span class="dca-dim"> 더 구매하면</span></div>
+        <div class="dca-sentence-line"><span class="dca-field-tap" data-field="qty">${qtyDisplay}</span>${qtyCaret}<span class="dca-field-tap" data-field="qty">주</span><span class="dca-dim"> 더 구매하면</span></div>
       `;
     } else {
-      const amtEmpty = !dcaRawDigits;
       if (currency === 'KRW') {
-        const amtDisplay = amtEmpty ? '10,000' : Number(dcaRawDigits).toLocaleString('ko-KR');
+        const amtDisplay = dcaEffectiveRawInput().toLocaleString('ko-KR');
         dcaSentenceEl.innerHTML = `
           <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap" data-field="amount">${amtDisplay}</span>${caret}<span class="dca-field-tap" data-field="amount">원</span></div>
           <div class="dca-sentence-line"><span class="dca-dim">더 구매하면</span></div>
@@ -3521,7 +3540,7 @@
       } else {
         // USD leads with "$" like the price field -- no trailing unit to put
         // the caret before, so it just sits after the number.
-        const amtDisplay = amtEmpty ? '10' : Number(dcaRawDigits).toLocaleString('en-US');
+        const amtDisplay = dcaEffectiveRawInput().toLocaleString('en-US');
         dcaSentenceEl.innerHTML = `
           <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap" data-field="amount">$${amtDisplay}</span>${caret}</div>
           <div class="dca-sentence-line"><span class="dca-dim">더 구매하면</span></div>
@@ -3530,12 +3549,11 @@
     }
   }
 
-  // When nothing's been typed yet, the sentence shows an example number
-  // (10주 / 10,000원 / $10) -- the totals below should reflect that same
-  // example instead of freezing at 0, so the preview always reads as a
-  // coherent "if you did this" scenario.
+  // Before the qty/amount field is touched, it shows (and the totals below
+  // use) an example number instead of freezing at 0 -- once touched, it's
+  // exactly what's been typed, down to 0 if fully deleted.
   function dcaEffectiveRawInput() {
-    if (dcaRawDigits) return Number(dcaRawDigits);
+    if (dcaRawDigitsTouched) return Number(dcaRawDigits) || 0;
     if (dcaMode === 'qty') return 10;
     return currency === 'KRW' ? 10000 : 10;
   }
@@ -3615,6 +3633,7 @@
     dcaMode = btn.dataset.mode;
     updateDcaModeButtons();
     dcaRawDigits = '';
+    dcaRawDigitsTouched = false;
     dcaActiveField = dcaMode === 'amount' ? 'amount' : 'qty';
     renderDcaPage();
   });
@@ -3627,12 +3646,25 @@
   dcaKeypadEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.dca-keypad-btn');
     if (!btn) return;
+    const key = btn.dataset.key;
     const editingPrice = dcaActiveField === 'price';
-    const current = editingPrice ? dcaPriceDigits : dcaRawDigits;
-    const next =
-      btn.dataset.key === 'back' ? current.slice(0, -1) : current.length < 12 ? current + btn.dataset.key : current;
-    if (editingPrice) dcaPriceDigits = next;
-    else dcaRawDigits = next;
+    const touched = editingPrice ? dcaPriceDigitsTouched : dcaRawDigitsTouched;
+    let current = editingPrice ? dcaPriceDigits : dcaRawDigits;
+    if (key === 'back' && !touched) {
+      // Backspacing a still-"live" field (digit keys already start fresh
+      // from empty, as before) picks up what's actually on screen -- the
+      // example qty/amount, or today's price -- so delete has something to
+      // remove instead of silently no-op'ing on an empty string.
+      current = String(editingPrice ? Math.round(getDcaPricePair().native) : dcaEffectiveRawInput());
+    }
+    const next = key === 'back' ? current.slice(0, -1) : current.length < 12 ? current + key : current;
+    if (editingPrice) {
+      dcaPriceDigits = next;
+      dcaPriceDigitsTouched = true;
+    } else {
+      dcaRawDigits = next;
+      dcaRawDigitsTouched = true;
+    }
     renderDcaPage();
   });
   dcaApplyBtn.addEventListener('click', applyDca);
