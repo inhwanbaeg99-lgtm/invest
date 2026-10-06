@@ -1684,7 +1684,11 @@
   const FAPI = 'https://fapi.binance.com/fapi/v1';
   const YAHOO_PROXY = 'https://little-base-1203.inhwanbaeg99.workers.dev/';
   const TOP_N = 20;
-  const REFRESH_MS = 1000;
+  // Binance weighs the no-symbol /ticker/24hr call at 40 against a 2400/min
+  // IP cap -- 1000ms (40*60=2400) left zero headroom, so any extra request
+  // (a chart's klines fetch, a second tab) tipped it over into a 418 ban.
+  // 2000ms keeps steady-state weight at ~1200/min, leaving real margin.
+  const REFRESH_MS = 2000;
   const FX_REFRESH_MS = 10 * 60 * 1000;
 
   const listEl = document.getElementById('list');
@@ -2855,14 +2859,22 @@
     });
   }
 
+  // A single failed poll is almost always a transient rate-limit blip, not a
+  // real outage -- keep showing the last known prices through it instead of
+  // flashing an error, and only give up after several in a row.
+  let refreshFailStreak = 0;
+  const REFRESH_FAIL_THRESHOLD = 4;
+
   async function refreshAll() {
     try {
       fullTickers = await fetchJson(`${FAPI}/ticker/24hr`);
+      refreshFailStreak = 0;
       renderCurrent();
       tickOverlayPrices();
       touchUpdatedAt();
     } catch (e) {
-      if (!rawTickers.length) {
+      refreshFailStreak++;
+      if (!rawTickers.length && refreshFailStreak >= REFRESH_FAIL_THRESHOLD) {
         listEl.innerHTML = '<div class="empty">시세를 불러오지 못했습니다</div>';
       }
     }
