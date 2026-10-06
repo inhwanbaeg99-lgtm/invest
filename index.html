@@ -748,51 +748,36 @@
     padding: 16px;
     margin-bottom: 16px;
   }
-  .add-holding-selected {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 12px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--line);
-  }
-  .add-holding-selected-name {
-    font-size: 15px;
-    font-weight: 800;
-  }
-  .add-holding-selected-kr {
-    font-size: 12px;
-    color: var(--ink-sub);
-  }
-  .add-holding-change-btn {
-    text-align: center;
-    margin-bottom: 16px;
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--accent);
-    cursor: pointer;
-  }
-  .add-holding-field {
-    margin-bottom: 14px;
-  }
-  .add-holding-field:last-child {
-    margin-bottom: 0;
-  }
   .aho-box {
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--line);
+  }
+  .aho-box:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
   }
   .aho-box-label {
     font-size: 12.5px;
     color: var(--ink-sub);
     margin-bottom: 8px;
   }
-  .aho-box-label-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .aho-mode-text-toggle {
     margin-bottom: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .aho-mode-text {
+    color: var(--ink-sub);
+    cursor: pointer;
+  }
+  .aho-mode-text.active {
+    color: var(--ink);
+  }
+  .aho-mode-text-sep {
+    color: var(--ink-sub);
+    margin: 0 4px;
   }
   .aho-line {
     font-size: 22px;
@@ -800,29 +785,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-  .add-holding-field label {
-    display: block;
-    font-size: 12.5px;
-    color: var(--ink-sub);
-    margin-bottom: 6px;
-  }
-  .add-holding-field input {
-    width: 100%;
-    height: 48px;
-    padding: 0 14px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--panel);
-    color: var(--ink);
-    font-family: inherit;
-    font-size: 16px;
-    font-variant-numeric: tabular-nums;
-    box-sizing: border-box;
-  }
-  .add-holding-field input:focus {
-    outline: none;
-    border-color: var(--accent);
   }
   .add-holding-submit {
     width: 100%;
@@ -1466,20 +1428,20 @@
 
   <div class="add-holding-page" id="addHoldingPage">
     <div class="add-holding-inner">
-      <div class="add-holding-header">
-        <div class="title-group">
-          <div class="title">Tickr</div>
-          <div class="currency-toggle" id="addHoldingCurrencyToggle">
-            <button type="button" class="currency-btn" data-currency="USD">$</button>
-            <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
-          </div>
-        </div>
-        <button type="button" class="chart-close" id="addHoldingClose" aria-label="닫기">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="6" y1="6" x2="18" y2="18" />
-            <line x1="18" y1="6" x2="6" y2="18" />
+      <div class="add-holding-header dca-page-header">
+        <button type="button" class="chart-close" id="addHoldingBack" aria-label="뒤로">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
+        <div class="dca-page-title">
+          <div class="dca-page-symbol" id="addHoldingHeaderSymbol"></div>
+          <div class="dca-page-price" id="addHoldingHeaderPrice"></div>
+        </div>
+        <div class="currency-toggle" id="addHoldingCurrencyToggle">
+          <button type="button" class="currency-btn" data-currency="USD">$</button>
+          <button type="button" class="currency-btn active" data-currency="KRW">₩</button>
+        </div>
       </div>
       <div class="add-holding-search-row" id="addHoldingSearchRow">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1491,28 +1453,19 @@
       <div class="add-holding-results" id="addHoldingResults"></div>
       <div class="add-holding-form" id="addHoldingForm" hidden>
         <div class="add-holding-card">
-          <div class="add-holding-selected">
-            <div>
-              <div class="add-holding-selected-name" id="addHoldingSelectedName"></div>
-              <div class="add-holding-selected-kr" id="addHoldingSelectedKr"></div>
-            </div>
-            <div>
-              <div class="price" id="addHoldingSelectedPrice"></div>
-              <div class="change" id="addHoldingSelectedChange"></div>
-            </div>
-          </div>
-          <div class="add-holding-change-btn" id="addHoldingChangeBtn">종목 변경</div>
           <div class="aho-box">
-            <div class="aho-box-label">평균 매입가</div>
-            <div class="aho-line" id="ahoPriceLine"></div>
+            <div class="aho-box-label">평균 매입가 (원)</div>
+            <div class="aho-line" id="ahoPriceKrwLine"></div>
           </div>
           <div class="aho-box">
-            <div class="aho-box-label-row">
-              <div class="aho-box-label">수량</div>
-              <div class="dca-mode-toggle" id="ahoModeToggle">
-                <button type="button" class="dca-mode-btn active" data-mode="qty">수량</button>
-                <button type="button" class="dca-mode-btn" data-mode="amount">금액</button>
-              </div>
+            <div class="aho-box-label">평균 매입가 (달러)</div>
+            <div class="aho-line" id="ahoPriceUsdLine"></div>
+          </div>
+          <div class="aho-box">
+            <div class="aho-mode-text-toggle" id="ahoModeToggle">
+              <span class="aho-mode-text active" data-mode="qty">수량</span>
+              <span class="aho-mode-text-sep">·</span>
+              <span class="aho-mode-text" data-mode="amount">금액</span>
             </div>
             <div class="aho-line" id="ahoQtyLine"></div>
             <div class="dca-total-row" id="ahoTotalRow"></div>
@@ -1528,11 +1481,11 @@
           <button type="button" class="dca-keypad-btn" data-key="7">7</button>
           <button type="button" class="dca-keypad-btn" data-key="8">8</button>
           <button type="button" class="dca-keypad-btn" data-key="9">9</button>
-          <button type="button" class="dca-keypad-btn" data-key=".">.</button>
+          <button type="button" class="dca-keypad-btn" data-key="00">00</button>
           <button type="button" class="dca-keypad-btn" data-key="0">0</button>
           <button type="button" class="dca-keypad-btn dca-keypad-back" data-key="back" aria-label="지우기">⌫</button>
         </div>
-        <button type="button" class="add-holding-submit" id="addHoldingSubmit">담기</button>
+        <button type="button" class="add-holding-submit dca-apply-btn" id="addHoldingSubmit">추가</button>
       </div>
     </div>
   </div>
@@ -1716,17 +1669,15 @@
   const navHighlightEl = document.getElementById('navHighlight');
   const bottomNavBarEl = document.getElementById('bottomNavBar');
   const addHoldingPageEl = document.getElementById('addHoldingPage');
-  const addHoldingClose = document.getElementById('addHoldingClose');
+  const addHoldingBackEl = document.getElementById('addHoldingBack');
+  const addHoldingHeaderSymbolEl = document.getElementById('addHoldingHeaderSymbol');
+  const addHoldingHeaderPriceEl = document.getElementById('addHoldingHeaderPrice');
   const addHoldingSearchRowEl = document.getElementById('addHoldingSearchRow');
   const addHoldingSearchInput = document.getElementById('addHoldingSearchInput');
   const addHoldingResultsEl = document.getElementById('addHoldingResults');
   const addHoldingFormEl = document.getElementById('addHoldingForm');
-  const addHoldingSelectedName = document.getElementById('addHoldingSelectedName');
-  const addHoldingSelectedKr = document.getElementById('addHoldingSelectedKr');
-  const addHoldingSelectedPriceEl = document.getElementById('addHoldingSelectedPrice');
-  const addHoldingSelectedChangeEl = document.getElementById('addHoldingSelectedChange');
-  const addHoldingChangeBtn = document.getElementById('addHoldingChangeBtn');
-  const ahoPriceLineEl = document.getElementById('ahoPriceLine');
+  const ahoPriceKrwLineEl = document.getElementById('ahoPriceKrwLine');
+  const ahoPriceUsdLineEl = document.getElementById('ahoPriceUsdLine');
   const ahoQtyLineEl = document.getElementById('ahoQtyLine');
   const ahoTotalRowEl = document.getElementById('ahoTotalRow');
   const ahoModeToggleEl = document.getElementById('ahoModeToggle');
@@ -2545,6 +2496,8 @@
     addHoldingResultsEl.style.display = '';
     addHoldingSearchRowEl.style.display = '';
     addHoldingFormEl.hidden = true;
+    addHoldingHeaderSymbolEl.textContent = '';
+    addHoldingHeaderPriceEl.innerHTML = '';
     addHoldingPageEl.classList.add('open');
     addHoldingSearchInput.focus();
   }
@@ -2613,49 +2566,43 @@
   // Re-renders just the selected stock's live price/change -- called on currency
   // toggle too, so it must never touch the qty/avg-price inputs (would blow away
   // whatever the user is mid-typing).
-  function refreshAddHoldingSelectedPrice() {
+  function refreshAddHoldingHeaderPrice() {
     if (!addHoldingSelected) return;
     const t = findTicker(addHoldingSelected.symbol);
     if (t) {
       const changePct = Number(t.priceChangePercent);
       const cls = changePct > 0 ? 'up' : changePct < 0 ? 'down' : '';
       const sign = changePct > 0 ? '+' : '';
-      addHoldingSelectedPriceEl.textContent = formatPrice(t.lastPrice);
-      addHoldingSelectedChangeEl.textContent = `${sign}${changePct.toFixed(2)}%`;
-      addHoldingSelectedChangeEl.className = `change ${cls}`;
+      addHoldingHeaderPriceEl.innerHTML = `${formatPrice(t.lastPrice)} <span class="${cls}">${sign}${changePct.toFixed(2)}%</span>`;
     } else {
-      addHoldingSelectedPriceEl.textContent = '';
-      addHoldingSelectedChangeEl.textContent = '';
+      addHoldingHeaderPriceEl.innerHTML = '';
     }
   }
 
-  function getSymbolLivePriceNative(symbol) {
-    const t = findTicker(symbol);
-    const usd = t ? Number(t.lastPrice) : 0;
-    return currency === 'KRW' && krwRate ? usd * krwRate : usd;
-  }
-
   let ahoMode = 'qty';
-  // Which field the keypad currently types into: 'price' or 'qty' (the qty
-  // field doubles as the amount field in 금액 mode).
-  let ahoActiveField = 'price';
-  let ahoPriceDigits = '';
+  // Which field the keypad currently types into: 'priceKrw', 'priceUsd', or
+  // 'qty' (the qty field doubles as the amount field in 금액 mode).
+  let ahoActiveField = 'qty';
+  let ahoPriceKrwDigits = '';
+  let ahoPriceUsdDigits = '';
   let ahoQtyDigits = '';
+  // Once a price field has been hand-edited, typing in the OTHER currency's
+  // field stops auto-filling it via FX -- same dirty-tracking convention as
+  // the old dual-input version.
+  let ahoPriceKrwDirty = false;
+  let ahoPriceUsdDirty = false;
 
   function updateAhoModeButtons() {
-    ahoModeToggleEl.querySelectorAll('.dca-mode-btn').forEach((b) => {
-      b.classList.toggle('active', b.dataset.mode === ahoMode);
+    ahoModeToggleEl.querySelectorAll('.aho-mode-text').forEach((el) => {
+      el.classList.toggle('active', el.dataset.mode === ahoMode);
     });
   }
 
-  // Keypad digit buffers are plain strings that may contain a single "." --
-  // appends/backspaces a key onto one, capping decimal places.
-  function appendAhoDigit(current, key, maxDecimals) {
+  // The keypad has no decimal key (matches the DCA page's keypad) -- plain
+  // digit append/backspace only.
+  function appendAhoDigit(current, key) {
     if (key === 'back') return current.slice(0, -1);
-    if (key === '.') return maxDecimals > 0 && !current.includes('.') ? (current || '0') + '.' : current;
-    const [, decPart] = current.split('.');
-    if (decPart !== undefined && decPart.length >= maxDecimals) return current;
-    return current + key;
+    return current.length < 14 ? current + key : current;
   }
 
   function formatAhoDigits(digits) {
@@ -2667,14 +2614,17 @@
 
   function renderAho() {
     if (!addHoldingSelected) return;
-    const priceCaret = ahoActiveField === 'price' ? '<span class="dca-caret"></span>' : '';
-    const priceNum = formatAhoDigits(ahoPriceDigits);
-    ahoPriceLineEl.innerHTML =
-      currency === 'KRW'
-        ? `<span class="dca-field-tap" data-field="price">${priceNum}</span>${priceCaret}<span class="dca-field-tap" data-field="price">원</span>`
-        : `<span class="dca-field-tap" data-field="price">$${priceNum}</span>${priceCaret}`;
+    const caret = '<span class="dca-caret"></span>';
 
-    const qtyCaret = ahoActiveField === 'qty' ? '<span class="dca-caret"></span>' : '';
+    const krwCaret = ahoActiveField === 'priceKrw' ? caret : '';
+    const krwNum = formatAhoDigits(ahoPriceKrwDigits);
+    ahoPriceKrwLineEl.innerHTML = `<span class="dca-field-tap" data-field="priceKrw">${krwNum}</span>${krwCaret}<span class="dca-field-tap" data-field="priceKrw">원</span>`;
+
+    const usdCaret = ahoActiveField === 'priceUsd' ? caret : '';
+    const usdNum = formatAhoDigits(ahoPriceUsdDigits);
+    ahoPriceUsdLineEl.innerHTML = `<span class="dca-field-tap" data-field="priceUsd">$${usdNum}</span>${usdCaret}`;
+
+    const qtyCaret = ahoActiveField === 'qty' ? caret : '';
     if (!ahoQtyDigits) {
       const placeholder = ahoMode === 'qty' ? '몇 주 담을까요?' : '얼마나 담을까요?';
       ahoQtyLineEl.innerHTML = `<span class="dca-field-tap dca-dim" data-field="qty">${placeholder}</span>${qtyCaret}`;
@@ -2684,35 +2634,44 @@
       ahoQtyLineEl.innerHTML = `<span class="dca-field-tap" data-field="qty">${qtyNum}</span>${qtyCaret}<span class="dca-field-tap" data-field="qty">${unit}</span>`;
     }
 
-    const priceNative = Number(ahoPriceDigits) || 0;
+    const priceNative = currency === 'KRW' ? Number(ahoPriceKrwDigits) || 0 : Number(ahoPriceUsdDigits) || 0;
     const qtyRaw = Number(ahoQtyDigits) || 0;
     const qty = ahoMode === 'qty' ? qtyRaw : priceNative ? qtyRaw / priceNative : 0;
-    const total = ahoMode === 'qty' ? qty * priceNative : qtyRaw;
-    ahoTotalRowEl.textContent = `총 ${formatNativeAmount(total)}`;
+    if (ahoMode === 'qty') {
+      ahoTotalRowEl.textContent = `총 ${formatNativeAmount(qty * priceNative)}`;
+    } else {
+      ahoTotalRowEl.textContent = `${qty.toLocaleString('ko-KR', { maximumFractionDigits: 6 })}주`;
+    }
   }
 
   function selectAddHoldingSymbol(symbol, cat) {
     addHoldingSelected = { symbol, cat };
-    const name = displayName(symbol);
-    const kr = krName(name, cat);
-    addHoldingSelectedName.textContent = name;
-    addHoldingSelectedKr.textContent = kr || CATEGORY_LABELS[cat];
-
-    refreshAddHoldingSelectedPrice();
+    addHoldingHeaderSymbolEl.textContent = displayName(symbol);
+    refreshAddHoldingHeaderPrice();
 
     const existing = holdings.find((h) => h.symbol === symbol);
     ahoMode = 'qty';
-    // Price starts pre-filled with a sensible default (today's live price, or
-    // the existing stored price) -- quantity is the field someone typically
-    // needs to type right away, so the keypad starts pointed there.
+    // Quantity is the field someone typically needs to type right away --
+    // price starts pre-filled with a sensible default (today's live price,
+    // or the existing stored price) -- so the keypad starts pointed there.
     ahoActiveField = 'qty';
     if (existing) {
-      ahoPriceDigits = String(currency === 'KRW' ? Math.round(existing.avgPriceKrw) : existing.avgPriceUsd);
+      ahoPriceKrwDigits = String(Math.round(existing.avgPriceKrw));
+      ahoPriceUsdDigits = String(Math.round(existing.avgPriceUsd));
       ahoQtyDigits = String(existing.qty);
+      // An existing holding's two prices were entered independently -- treat
+      // both as dirty so editing one doesn't silently overwrite the other.
+      ahoPriceKrwDirty = true;
+      ahoPriceUsdDirty = true;
     } else {
-      const live = getSymbolLivePriceNative(symbol);
-      ahoPriceDigits = String(currency === 'KRW' ? Math.round(live) : Number(live.toFixed(2)));
+      const t = findTicker(symbol);
+      const usd = t ? Number(t.lastPrice) : 0;
+      const krw = krwRate ? usd * krwRate : 0;
+      ahoPriceKrwDigits = krw ? String(Math.round(krw)) : '';
+      ahoPriceUsdDigits = usd ? String(Math.round(usd)) : '';
       ahoQtyDigits = '';
+      ahoPriceKrwDirty = false;
+      ahoPriceUsdDirty = false;
     }
     updateAhoModeButtons();
     renderAho();
@@ -2930,15 +2889,13 @@
     if (searchOpen) performGlobalSearch(searchInputEl.value);
     if (portfolioDetailPageEl.classList.contains('open')) renderPortfolioDetail();
     if (addHoldingPageEl.classList.contains('open')) {
-      refreshAddHoldingSelectedPrice();
+      refreshAddHoldingHeaderPrice();
+      // Both price boxes (원/달러) are independent and always visible, so a
+      // currency toggle only changes which one drives the 수량/금액 unit and
+      // conversion basis. A typed 금액 is denominated in the old currency
+      // though, so that one has to be cleared.
       if (addHoldingSelected) {
-        const existing = holdings.find((h) => h.symbol === addHoldingSelected.symbol);
-        if (existing) {
-          ahoPriceDigits = String(currency === 'KRW' ? Math.round(existing.avgPriceKrw) : existing.avgPriceUsd);
-        } else {
-          const live = getSymbolLivePriceNative(addHoldingSelected.symbol);
-          ahoPriceDigits = String(currency === 'KRW' ? Math.round(live) : Number(live.toFixed(2)));
-        }
+        if (ahoMode === 'amount') ahoQtyDigits = '';
         renderAho();
       }
     }
@@ -3776,26 +3733,19 @@
     const row = e.target.closest('.row');
     if (row) selectAddHoldingSymbol(row.dataset.symbol, row.dataset.cat);
   });
-  addHoldingChangeBtn.addEventListener('click', () => {
-    addHoldingSelected = null;
-    addHoldingFormEl.hidden = true;
-    addHoldingSearchRowEl.style.display = '';
-    addHoldingResultsEl.style.display = '';
-    addHoldingSearchInput.focus();
-  });
   addHoldingSearchInput.addEventListener('input', () => {
     renderAddHoldingResults(addHoldingSearchInput.value);
   });
   ahoModeToggleEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('.dca-mode-btn');
-    if (!btn || btn.dataset.mode === ahoMode) return;
-    ahoMode = btn.dataset.mode;
+    const el = e.target.closest('.aho-mode-text');
+    if (!el || el.dataset.mode === ahoMode) return;
+    ahoMode = el.dataset.mode;
     updateAhoModeButtons();
     ahoQtyDigits = '';
     ahoActiveField = 'qty';
     renderAho();
   });
-  [ahoPriceLineEl, ahoQtyLineEl].forEach((el) => {
+  [ahoPriceKrwLineEl, ahoPriceUsdLineEl, ahoQtyLineEl].forEach((el) => {
     el.addEventListener('click', (e) => {
       const tap = e.target.closest('.dca-field-tap');
       if (!tap) return;
@@ -3806,22 +3756,36 @@
   ahoKeypadEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.dca-keypad-btn');
     if (!btn) return;
-    const editingPrice = ahoActiveField === 'price';
-    const maxDecimals = editingPrice ? (currency === 'KRW' ? 0 : 2) : 8;
-    if (editingPrice) ahoPriceDigits = appendAhoDigit(ahoPriceDigits, btn.dataset.key, maxDecimals);
-    else ahoQtyDigits = appendAhoDigit(ahoQtyDigits, btn.dataset.key, maxDecimals);
+    const key = btn.dataset.key;
+    if (ahoActiveField === 'priceKrw') {
+      ahoPriceKrwDigits = appendAhoDigit(ahoPriceKrwDigits, key);
+      ahoPriceKrwDirty = ahoPriceKrwDigits !== '';
+      if (ahoPriceKrwDirty && !ahoPriceUsdDirty && krwRate) {
+        const krw = Number(ahoPriceKrwDigits) || 0;
+        ahoPriceUsdDigits = krw ? String(Math.round(krw / krwRate)) : '';
+      }
+    } else if (ahoActiveField === 'priceUsd') {
+      ahoPriceUsdDigits = appendAhoDigit(ahoPriceUsdDigits, key);
+      ahoPriceUsdDirty = ahoPriceUsdDigits !== '';
+      if (ahoPriceUsdDirty && !ahoPriceKrwDirty && krwRate) {
+        const usd = Number(ahoPriceUsdDigits) || 0;
+        ahoPriceKrwDigits = usd ? String(Math.round(usd * krwRate)) : '';
+      }
+    } else {
+      ahoQtyDigits = appendAhoDigit(ahoQtyDigits, key);
+    }
     renderAho();
   });
 
   addHoldingSubmitBtn.addEventListener('click', () => {
     if (!addHoldingSelected) return;
-    const priceNative = Number(ahoPriceDigits) || 0;
+    const avgPriceKrw = Number(ahoPriceKrwDigits) || 0;
+    const avgPriceUsd = Number(ahoPriceUsdDigits) || 0;
     const qtyRaw = Number(ahoQtyDigits) || 0;
-    if (priceNative <= 0 || qtyRaw <= 0) return;
+    if (avgPriceKrw <= 0 || avgPriceUsd <= 0 || qtyRaw <= 0) return;
+    const priceNative = currency === 'KRW' ? avgPriceKrw : avgPriceUsd;
     const qty = ahoMode === 'qty' ? qtyRaw : priceNative ? qtyRaw / priceNative : 0;
     if (qty <= 0) return;
-    const avgPriceKrw = currency === 'KRW' ? priceNative : krwRate ? priceNative * krwRate : 0;
-    const avgPriceUsd = currency === 'KRW' ? (krwRate ? priceNative / krwRate : 0) : priceNative;
     const idx = holdings.findIndex((h) => h.symbol === addHoldingSelected.symbol);
     const entry = { symbol: addHoldingSelected.symbol, cat: addHoldingSelected.cat, qty, avgPriceKrw, avgPriceUsd };
     if (idx >= 0) holdings[idx] = entry;
@@ -3831,7 +3795,19 @@
     if (view === 'home') renderHome();
     if (portfolioDetailPageEl.classList.contains('open')) renderPortfolioDetail();
   });
-  addHoldingClose.addEventListener('click', closeAddHolding);
+  addHoldingBackEl.addEventListener('click', () => {
+    if (!addHoldingFormEl.hidden) {
+      addHoldingSelected = null;
+      addHoldingFormEl.hidden = true;
+      addHoldingSearchRowEl.style.display = '';
+      addHoldingResultsEl.style.display = '';
+      addHoldingHeaderSymbolEl.textContent = '';
+      addHoldingHeaderPriceEl.innerHTML = '';
+      addHoldingSearchInput.focus();
+      return;
+    }
+    closeAddHolding();
+  });
   addHoldingPageEl.addEventListener('click', (e) => {
     if (e.target === addHoldingPageEl) closeAddHolding();
   });
