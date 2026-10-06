@@ -225,8 +225,11 @@
   }
   .mode-tab {
     flex: 0 0 auto;
-    height: 36px;
-    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px 7px;
     border: 1px solid var(--line);
     border-radius: 10px;
     background: var(--panel);
@@ -236,6 +239,28 @@
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
+  }
+  .mode-tab-icon {
+    font-size: 15px;
+    line-height: 1;
+    height: 15px;
+    margin-bottom: 4px;
+    opacity: 1;
+    overflow: hidden;
+    transition: height 0.2s ease, opacity 0.15s ease, margin 0.2s ease;
+  }
+  .mode-tab-icon-text {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .mode-tab.active .mode-tab-icon-text {
+    color: #04201d;
+  }
+  .mode-tabs.icons-collapsed .mode-tab-icon {
+    height: 0;
+    opacity: 0;
+    margin-bottom: 0;
   }
   .mode-tab.active {
     background: var(--accent);
@@ -1065,12 +1090,12 @@
       </div>
       <div class="mode-tabs-wrap">
         <div class="mode-tabs" id="modeTabs">
-          <button type="button" class="mode-tab active" data-mode="watchlist">관심종목</button>
-          <button type="button" class="mode-tab" data-mode="domestic">국내주식</button>
-          <button type="button" class="mode-tab" data-mode="us">미국주식</button>
-          <button type="button" class="mode-tab" data-mode="leverage">레버리지</button>
-          <button type="button" class="mode-tab" data-mode="crypto">가상화폐</button>
-          <button type="button" class="mode-tab" data-mode="index">지수·원자재</button>
+          <button type="button" class="mode-tab active" data-mode="watchlist"><span class="mode-tab-icon">❤️</span><span class="mode-tab-label">관심종목</span></button>
+          <button type="button" class="mode-tab" data-mode="domestic"><span class="mode-tab-icon">🇰🇷</span><span class="mode-tab-label">국내주식</span></button>
+          <button type="button" class="mode-tab" data-mode="us"><span class="mode-tab-icon">🇺🇸</span><span class="mode-tab-label">미국주식</span></button>
+          <button type="button" class="mode-tab" data-mode="leverage"><span class="mode-tab-icon mode-tab-icon-text">2X</span><span class="mode-tab-label">레버리지</span></button>
+          <button type="button" class="mode-tab" data-mode="crypto"><span class="mode-tab-icon">🪙</span><span class="mode-tab-label">가상화폐</span></button>
+          <button type="button" class="mode-tab" data-mode="index"><span class="mode-tab-icon">🥇</span><span class="mode-tab-label">지수·원자재</span></button>
         </div>
         <div class="tabs-fade tabs-fade-left" id="tabsFadeLeft"></div>
         <div class="tabs-fade tabs-fade-right" id="tabsFadeRight"></div>
@@ -2395,6 +2420,7 @@
     const { scrollLeft, scrollWidth, clientWidth } = modeTabsEl;
     tabsFadeLeftEl.classList.toggle('show', scrollLeft > 4);
     tabsFadeRightEl.classList.toggle('show', scrollLeft < scrollWidth - clientWidth - 4);
+    modeTabsEl.classList.toggle('icons-collapsed', scrollLeft > 4);
   }
   modeTabsEl.addEventListener('scroll', updateTabsFade);
   window.addEventListener('resize', updateTabsFade);
@@ -2738,21 +2764,13 @@
     }
 
     if (hoverIdx != null && points[hoverIdx]) {
-      const [hx, hy] = points[hoverIdx];
+      const [hx] = points[hoverIdx];
       ctx.save();
       ctx.strokeStyle = 'rgba(255,255,255,0.35)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(hx, 0);
       ctx.lineTo(hx, h);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(hx, hy, 4, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.strokeStyle = '#0a0b0d';
-      ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
     }
