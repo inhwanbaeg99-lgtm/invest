@@ -1175,6 +1175,9 @@
     color: var(--ink);
     cursor: pointer;
   }
+  .dca-field-tap.dca-placeholder {
+    color: var(--ink-sub);
+  }
   .dca-dim {
     color: var(--ink-sub);
   }
@@ -3431,16 +3434,18 @@
         priceHtml = `<span class="dca-field-tap" data-field="price">${formatNativeAmount(priceNative)}</span>${priceCaret}`;
       }
       const qtyCaret = dcaActiveField === 'qty' ? caret : '';
-      const qtyDisplay = dcaRawDigits ? Number(dcaRawDigits).toLocaleString('ko-KR') : '';
+      const qtyEmpty = !dcaRawDigits;
+      const qtyDisplay = qtyEmpty ? '10' : Number(dcaRawDigits).toLocaleString('ko-KR');
       dcaSentenceEl.innerHTML = `
         <div class="dca-sentence-line">${priceHtml}<span class="dca-dim">으로</span></div>
-        <div class="dca-sentence-line"><span class="dca-field-tap" data-field="qty">${qtyDisplay}</span>${qtyCaret}<span class="dca-field-tap" data-field="qty">주</span><span class="dca-dim"> 더 구매하면</span></div>
+        <div class="dca-sentence-line"><span class="dca-field-tap${qtyEmpty ? ' dca-placeholder' : ''}" data-field="qty">${qtyDisplay}</span>${qtyCaret}<span class="dca-field-tap" data-field="qty">주</span><span class="dca-dim"> 더 구매하면</span></div>
       `;
     } else {
-      const amtDisplay = dcaRawDigits ? Number(dcaRawDigits).toLocaleString('ko-KR') : '';
+      const amtEmpty = !dcaRawDigits;
+      const amtDisplay = amtEmpty ? '10,000' : Number(dcaRawDigits).toLocaleString('ko-KR');
       const unit = currency === 'KRW' ? '원' : '달러';
       dcaSentenceEl.innerHTML = `
-        <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap" data-field="amount">${amtDisplay}</span>${caret}<span class="dca-field-tap" data-field="amount">${unit}</span></div>
+        <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap${amtEmpty ? ' dca-placeholder' : ''}" data-field="amount">${amtDisplay}</span>${caret}<span class="dca-field-tap" data-field="amount">${unit}</span></div>
         <div class="dca-sentence-line"><span class="dca-dim">더 구매하면</span></div>
       `;
     }
