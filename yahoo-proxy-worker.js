@@ -76,7 +76,10 @@ async function newsProxy(url, env) {
   try {
     const res = await fetch(
       `https://newsapi.org/v2/top-headlines?sources=${encodeURIComponent(sources)}&apiKey=${env.NEWSAPI_KEY}`,
-      { cf: { cacheTtl: 300, cacheEverything: true } },
+      {
+        headers: { 'User-Agent': 'TickrNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/)' },
+        cf: { cacheTtl: 300, cacheEverything: true },
+      },
     );
     const data = await res.json();
     return json(data, res.status);
