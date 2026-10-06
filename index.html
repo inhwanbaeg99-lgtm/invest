@@ -1054,15 +1054,36 @@
     margin-top: 24px;
     flex: 0 0 auto;
   }
+  .chart-my-holding-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .chart-my-holding-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .chart-dca-btn {
+    flex: 0 0 auto;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--ink-sub);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
   .chart-stat-row {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--line);
-  }
-  .chart-stat-row:last-child {
-    border-bottom: none;
+    padding: 8px 0;
   }
   .chart-stat-label {
     flex: 0 0 auto;
@@ -1086,6 +1107,16 @@
   }
   .chart-stat-sub.down {
     color: var(--down);
+  }
+  .chart-dca-panel {
+    margin-top: 6px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .chart-dca-result {
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
   }
   .chart-range-btn {
     flex: 1;
@@ -1193,8 +1224,38 @@
         <button type="button" class="chart-range-btn" data-range="ALL">전체</button>
       </div>
       <div class="chart-my-holding-section" id="chartMyHoldingSection" hidden>
-        <div class="home-section-title">내 주식</div>
-        <div class="list" id="chartMyHoldingList"></div>
+        <div class="chart-my-holding-card">
+          <div class="chart-my-holding-header">
+            <div class="home-section-title">내 주식</div>
+            <button type="button" class="chart-dca-btn" id="chartDcaBtn">물타기 계산기</button>
+          </div>
+          <div id="chartMyHoldingList"></div>
+          <div class="chart-dca-panel" id="chartDcaPanel" hidden>
+            <div class="add-holding-field">
+              <label for="chartDcaQty">추가 매수 수량</label>
+              <input type="text" inputmode="decimal" id="chartDcaQty" placeholder="10 주" />
+            </div>
+            <div class="add-holding-field">
+              <label for="chartDcaPrice" id="chartDcaPriceLabel">추가 매수 단가 (원)</label>
+              <input type="text" inputmode="decimal" id="chartDcaPrice" placeholder="21,874원" />
+            </div>
+            <button type="button" class="add-holding-submit" id="chartDcaCalcBtn">계산하기</button>
+            <div class="chart-dca-result" id="chartDcaResult" hidden>
+              <div class="chart-stat-row">
+                <div class="chart-stat-label">새 평균 단가</div>
+                <div class="chart-stat-value" id="chartDcaNewAvg"></div>
+              </div>
+              <div class="chart-stat-row">
+                <div class="chart-stat-label">새 보유 수량</div>
+                <div class="chart-stat-value" id="chartDcaNewQty"></div>
+              </div>
+              <div class="chart-stat-row">
+                <div class="chart-stat-label">새 총 투자금액</div>
+                <div class="chart-stat-value" id="chartDcaNewTotal"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1610,8 +1671,9 @@
     const out = decimals > 0 && decRaw !== undefined ? `${intPart}.${decRaw}` : intPart;
     return prefix + out + suffix;
   }
-  function attachMaskedNumberInput(el, opts) {
+  function attachMaskedNumberInput(el, optsOrFn) {
     el.addEventListener('input', () => {
+      const opts = typeof optsOrFn === 'function' ? optsOrFn() : optsOrFn;
       let raw = el.value.replace(/[^\d.]/g, '');
       if (opts.decimals <= 0) {
         raw = raw.replace(/\./g, '');
@@ -2572,6 +2634,16 @@
   const chartRangesEl = document.getElementById('chartRanges');
   const chartMyHoldingSectionEl = document.getElementById('chartMyHoldingSection');
   const chartMyHoldingListEl = document.getElementById('chartMyHoldingList');
+  const chartDcaBtn = document.getElementById('chartDcaBtn');
+  const chartDcaPanelEl = document.getElementById('chartDcaPanel');
+  const chartDcaQtyEl = document.getElementById('chartDcaQty');
+  const chartDcaPriceEl = document.getElementById('chartDcaPrice');
+  const chartDcaPriceLabelEl = document.getElementById('chartDcaPriceLabel');
+  const chartDcaCalcBtn = document.getElementById('chartDcaCalcBtn');
+  const chartDcaResultEl = document.getElementById('chartDcaResult');
+  const chartDcaNewAvgEl = document.getElementById('chartDcaNewAvg');
+  const chartDcaNewQtyEl = document.getElementById('chartDcaNewQty');
+  const chartDcaNewTotalEl = document.getElementById('chartDcaNewTotal');
   const chartScrubLabelEl = document.getElementById('chartScrubLabel');
   const scrubDateEl = document.getElementById('scrubDate');
   const scrubPriceEl = document.getElementById('scrubPrice');
@@ -3043,7 +3115,47 @@
       </div>
     `;
     chartMyHoldingSectionEl.hidden = false;
+    chartDcaPanelEl.hidden = true;
+    chartDcaResultEl.hidden = true;
+    chartDcaQtyEl.value = '';
+    chartDcaPriceEl.value = '';
   }
+
+  function updateChartDcaPriceLabel() {
+    chartDcaPriceLabelEl.textContent = currency === 'KRW' ? '추가 매수 단가 (원)' : '추가 매수 단가 (달러)';
+    chartDcaPriceEl.placeholder = currency === 'KRW' ? '21,874원' : '$16.22';
+  }
+
+  function calcDca() {
+    const h = holdings.find((x) => x.symbol === currentSymbol);
+    if (!h) return;
+    const addQty = parseMaskedNumber(chartDcaQtyEl.value);
+    const addPriceNative = parseMaskedNumber(chartDcaPriceEl.value);
+    if (addQty <= 0 || addPriceNative <= 0) return;
+    const curAvgNative = currency === 'KRW' ? h.avgPriceKrw || 0 : h.avgPriceUsd || 0;
+    const newQty = h.qty + addQty;
+    const newTotalNative = h.qty * curAvgNative + addQty * addPriceNative;
+    const newAvgNative = newTotalNative / newQty;
+    chartDcaNewAvgEl.textContent = formatNativeAmount(newAvgNative);
+    chartDcaNewQtyEl.textContent = newQty.toLocaleString('ko-KR') + '주';
+    chartDcaNewTotalEl.textContent = formatNativeAmount(newTotalNative);
+    chartDcaResultEl.hidden = false;
+  }
+
+  chartDcaBtn.addEventListener('click', () => {
+    chartDcaPanelEl.hidden = !chartDcaPanelEl.hidden;
+    if (!chartDcaPanelEl.hidden) {
+      updateChartDcaPriceLabel();
+      chartDcaQtyEl.value = '';
+      chartDcaPriceEl.value = '';
+      chartDcaResultEl.hidden = true;
+    }
+  });
+  chartDcaCalcBtn.addEventListener('click', calcDca);
+  attachMaskedNumberInput(chartDcaQtyEl, { suffix: ' 주', decimals: 8 });
+  attachMaskedNumberInput(chartDcaPriceEl, () =>
+    currency === 'KRW' ? { suffix: '원', decimals: 0 } : { prefix: '$', decimals: 2 },
+  );
 
   function closeChart() {
     chartOverlay.classList.remove('open');
