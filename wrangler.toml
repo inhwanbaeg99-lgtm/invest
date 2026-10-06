@@ -1,3 +1,4 @@
+# Workers Builds가 깃헙 push를 받아 이 설정으로 자동배포한다.
 name = "little-base-1203"
 main = "yahoo-proxy-worker.js"
 compatibility_date = "2024-11-01"
