@@ -3555,13 +3555,32 @@
       `;
     } else {
       const amtEmpty = !dcaRawDigits;
-      const amtDisplay = amtEmpty ? '10,000' : Number(dcaRawDigits).toLocaleString('ko-KR');
-      const unit = currency === 'KRW' ? '원' : '달러';
-      dcaSentenceEl.innerHTML = `
-        <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap${amtEmpty ? ' dca-placeholder' : ''}" data-field="amount">${amtDisplay}</span>${caret}<span class="dca-field-tap" data-field="amount">${unit}</span></div>
-        <div class="dca-sentence-line"><span class="dca-dim">더 구매하면</span></div>
-      `;
+      if (currency === 'KRW') {
+        const amtDisplay = amtEmpty ? '10,000' : Number(dcaRawDigits).toLocaleString('ko-KR');
+        dcaSentenceEl.innerHTML = `
+          <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap" data-field="amount">${amtDisplay}</span>${caret}<span class="dca-field-tap" data-field="amount">원</span></div>
+          <div class="dca-sentence-line"><span class="dca-dim">더 구매하면</span></div>
+        `;
+      } else {
+        // USD leads with "$" like the price field -- no trailing unit to put
+        // the caret before, so it just sits after the number.
+        const amtDisplay = amtEmpty ? '10' : Number(dcaRawDigits).toLocaleString('en-US');
+        dcaSentenceEl.innerHTML = `
+          <div class="dca-sentence-line"><span class="dca-dim">지금 </span><span class="dca-field-tap" data-field="amount">$${amtDisplay}</span>${caret}</div>
+          <div class="dca-sentence-line"><span class="dca-dim">더 구매하면</span></div>
+        `;
+      }
     }
+  }
+
+  // When nothing's been typed yet, the sentence shows an example number
+  // (10주 / 10,000원 / $10) -- the totals below should reflect that same
+  // example instead of freezing at 0, so the preview always reads as a
+  // coherent "if you did this" scenario.
+  function dcaEffectiveRawInput() {
+    if (dcaRawDigits) return Number(dcaRawDigits);
+    if (dcaMode === 'qty') return 10;
+    return currency === 'KRW' ? 10000 : 10;
   }
 
   function renderDcaPage() {
@@ -3576,16 +3595,17 @@
     const { native: priceNative } = getDcaPricePair();
     renderDcaSentence(priceNative);
 
-    const rawInput = Number(dcaRawDigits) || 0;
+    const rawInput = dcaEffectiveRawInput();
     let addQty, totalAmount;
     if (dcaMode === 'qty') {
       addQty = rawInput;
       totalAmount = addQty * priceNative;
+      dcaTotalRowEl.textContent = `총 ${formatNativeAmount(totalAmount)}`;
     } else {
       totalAmount = rawInput;
       addQty = priceNative ? totalAmount / priceNative : 0;
+      dcaTotalRowEl.textContent = `${addQty.toLocaleString('ko-KR', { maximumFractionDigits: 6 })}주`;
     }
-    dcaTotalRowEl.textContent = `총 ${formatNativeAmount(totalAmount)}`;
 
     const avgPriceNative = currency === 'KRW' ? h.avgPriceKrw || 0 : h.avgPriceUsd || 0;
     const curPct = avgPriceNative ? ((priceNative - avgPriceNative) / avgPriceNative) * 100 : 0;
