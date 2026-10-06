@@ -2386,11 +2386,25 @@
 
   // Regular trading-session hours per category, in the exchange's own local time.
   // Crypto has no entry -- it trades 24/7, so the 1D chart keeps its plain rolling window.
+  // Full-closure dates only (not early-close days) -- hardcoded per calendar
+  // year since neither exchange exposes a holiday-calendar API we already call.
+  // Needs a yearly top-up.
+  const US_MARKET_HOLIDAYS_2026 = new Set([
+    '2026-01-01', '2026-01-19', '2026-02-16', '2026-04-03', '2026-05-25',
+    '2026-06-19', '2026-07-03', '2026-09-07', '2026-11-26', '2026-12-25',
+  ]);
+  const KR_MARKET_HOLIDAYS_2026 = new Set([
+    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-02',
+    '2026-05-01', '2026-05-05', '2026-05-25', '2026-06-03', '2026-07-17',
+    '2026-08-17', '2026-09-24', '2026-09-25', '2026-10-05', '2026-10-09',
+    '2026-12-25', '2026-12-31',
+  ]);
+
   const MARKET_HOURS = {
-    domestic: { tz: 'Asia/Seoul', openMin: 9 * 60, closeMin: 15 * 60 + 30 },
-    us: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60 },
-    leverage: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60 },
-    index: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60 },
+    domestic: { tz: 'Asia/Seoul', openMin: 9 * 60, closeMin: 15 * 60 + 30, holidays: KR_MARKET_HOLIDAYS_2026 },
+    us: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60, holidays: US_MARKET_HOLIDAYS_2026 },
+    leverage: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60, holidays: US_MARKET_HOLIDAYS_2026 },
+    index: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60, holidays: US_MARKET_HOLIDAYS_2026 },
   };
 
   // How far "local wall-clock time in tz" is ahead of UTC, in minutes, at the given instant
@@ -2409,6 +2423,12 @@
   // session (in progress or just-closed) if today is a trading day and we're past
   // open, otherwise the previous weekday's full session. No holiday calendar --
   // holidays will incorrectly read as a trading day, which is an accepted gap.
+  function isTradingDay(cfg, weekdayIdx, dateStr) {
+    if (weekdayIdx === 0 || weekdayIdx === 6) return false;
+    if (cfg.holidays && cfg.holidays.has(dateStr)) return false;
+    return true;
+  }
+
   function getRegularSession(cat, now) {
     const cfg = MARKET_HOURS[cat];
     if (!cfg) return null;
@@ -2417,42 +2437,43 @@
     // across calls -- and since that value is used as a cache key elsewhere,
     // that jitter alone was enough to make every call look like a cache miss.
     now = new Date(Math.floor(now.getTime() / 60000) * 60000);
-    const offsetMin = tzOffsetMinutes(now, cfg.tz);
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: cfg.tz, hourCycle: 'h23', weekday: 'short',
-      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-    }).formatToParts(now).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
-    const y = +parts.year, m = +parts.month, d = +parts.day;
-    const weekdayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
 
-    const localToUtc = (minutesOfDay, dayOffset) =>
-      Date.UTC(y, m - 1, d, 0, 0, 0) + minutesOfDay * 60000 - offsetMin * 60000 - dayOffset * 86400000;
+    // Walk backward day by day until landing on a trading day (skips weekends
+    // and the hardcoded holiday list, including runs of consecutive closures
+    // like Lunar New Year) -- today only counts if `now` is at-or-past its open.
+    for (let dayOffset = 0; dayOffset <= 10; dayOffset++) {
+      const probe = new Date(now.getTime() - dayOffset * 86400000);
+      const offsetMin = tzOffsetMinutes(probe, cfg.tz);
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: cfg.tz, hourCycle: 'h23', weekday: 'short',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(probe).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
+      const weekdayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
+      const y = +parts.year, m = +parts.month, d = +parts.day;
+      const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (!isTradingDay(cfg, weekdayIdx, dateStr)) continue;
 
-    let dayOffset = weekdayIdx === 0 ? 2 : weekdayIdx === 6 ? 1 : 0; // roll weekends back to Friday
-    let sessionOpen = localToUtc(cfg.openMin, dayOffset);
-    let sessionClose = localToUtc(cfg.closeMin, dayOffset);
+      const sessionOpen = Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.openMin * 60000 - offsetMin * 60000;
+      if (dayOffset === 0 && now.getTime() < sessionOpen) continue; // today, but before open
 
-    if (dayOffset === 0 && now.getTime() < sessionOpen) {
-      // Weekday, but before today's open -- the last completed session is the prior weekday.
-      dayOffset = weekdayIdx === 1 ? 3 : 1; // Monday before open rolls back to Friday
-      sessionOpen = localToUtc(cfg.openMin, dayOffset);
-      sessionClose = localToUtc(cfg.closeMin, dayOffset);
+      const sessionClose = Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.closeMin * 60000 - offsetMin * 60000;
+      return {
+        start: sessionOpen,
+        end: Math.max(Math.min(now.getTime(), sessionClose), sessionOpen + 60000),
+        fullEnd: sessionClose,
+      };
     }
-
-    return {
-      start: sessionOpen,
-      end: Math.max(Math.min(now.getTime(), sessionClose), sessionOpen + 60000),
-      fullEnd: sessionClose,
-    };
+    return null;
   }
 
-  // Walks forward from `afterMs` to the next trading day's open (skipping the
-  // weekend) -- used once today's session has closed, to extend the 1D chart's
-  // time axis out to tomorrow's open instead of stopping dead at today's close.
+  // Walks forward from `afterMs` to the next trading day's open (skipping
+  // weekends and holidays) -- used once today's session has closed, to extend
+  // the 1D chart's time axis out to the next open instead of stopping dead at
+  // today's close.
   function getNextSessionStart(cat, afterMs) {
     const cfg = MARKET_HOURS[cat];
     if (!cfg) return null;
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 10; i++) {
       const probe = new Date(afterMs + i * 86400000);
       const offsetMin = tzOffsetMinutes(probe, cfg.tz);
       const parts = new Intl.DateTimeFormat('en-US', {
@@ -2460,8 +2481,9 @@
         year: 'numeric', month: '2-digit', day: '2-digit',
       }).formatToParts(probe).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
       const weekdayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
-      if (weekdayIdx === 0 || weekdayIdx === 6) continue;
       const y = +parts.year, m = +parts.month, d = +parts.day;
+      const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (!isTradingDay(cfg, weekdayIdx, dateStr)) continue;
       return Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.openMin * 60000 - offsetMin * 60000;
     }
     return null;
@@ -2599,20 +2621,10 @@
       ctx.stroke();
     }
 
-    // Room left after the real data -- either the session is still in progress
-    // (tail runs to "now") or it's closed and the domain was stretched out to
-    // tomorrow's open (tail runs flat at today's close through the dead gap).
-    // Either way: gray tail line, live/close point marked with a dot.
+    // Mark the live/last-real point with a dot. No flat placeholder drawn past
+    // it anymore -- the chart just ends where the real data does.
     const lastPt = points[points.length - 1];
     if (timeDomain && lastPt[0] < w - 1) {
-      ctx.beginPath();
-      ctx.moveTo(lastPt[0], lastPt[1]);
-      ctx.lineTo(w, lastPt[1]);
-      ctx.strokeStyle = '#8a8f9880';
-      ctx.lineWidth = 2;
-      ctx.lineJoin = 'round';
-      ctx.stroke();
-
       ctx.beginPath();
       ctx.arc(lastPt[0], lastPt[1], 4, 0, Math.PI * 2);
       ctx.fillStyle = color;
