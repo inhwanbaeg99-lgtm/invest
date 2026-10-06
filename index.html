@@ -424,10 +424,20 @@
     color: var(--ink-sub);
     margin-bottom: 8px;
   }
+  .portfolio-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
   .portfolio-total {
     font-size: 28px;
     font-weight: 800;
     font-variant-numeric: tabular-nums;
+  }
+  .portfolio-chevron {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink-sub);
   }
   .portfolio-pnl {
     margin-top: 4px;
@@ -445,6 +455,15 @@
     color: var(--accent);
     cursor: pointer;
   }
+  .add-holding-link-centered {
+    display: block;
+    margin-top: 16px;
+    text-align: center;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
   .home-section-header {
     display: flex;
     align-items: center;
@@ -456,7 +475,7 @@
     font-weight: 800;
   }
   .home-edit-link {
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 700;
     color: var(--ink-sub);
     cursor: pointer;
@@ -477,6 +496,7 @@
     cursor: pointer;
   }
   .holding-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -491,24 +511,36 @@
   .holding-row:hover {
     background: #1a1d22;
   }
-  .holding-badge-slot {
-    flex: 0 0 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .holding-edit-list {
+    padding-top: 10px;
   }
-  .holding-badge {
-    width: 40px;
-    height: 40px;
+  .holding-row.holding-row-edit {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .holding-row.holding-row-edit:last-child {
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .holding-remove-btn {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    width: 22px;
+    height: 22px;
+    border: none;
     border-radius: 999px;
-    background: var(--accent);
-    color: #04201d;
+    background: var(--down);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    font-weight: 800;
+    cursor: pointer;
+    z-index: 2;
   }
   .holding-info {
     flex: 1;
@@ -1334,9 +1366,6 @@
 
   // 레버리지/인버스 ETF와 지수 추종 ETF는 바이낸스 선물 API에서 EQUITY로 묶여 있어서 직접 분리
   const LEVERAGE_TICKERS = new Set(['SOXL', 'SOXS', 'TQQQ', 'SQQQ', 'KORU', 'RAM', 'RAMZ', 'UVXY']);
-  const LEVERAGE_MULTIPLIER = {
-    SOXL: 3, SOXS: 3, TQQQ: 3, SQQQ: 3, KORU: 3, RAM: 2, RAMZ: 2, UVXY: 1.5,
-  };
   const INDEX_COMMODITY_TICKERS = new Set([
     'XAU', 'CL', 'XAG', 'BZ', 'QQQ', 'EWY', 'SPY', 'NATGAS', 'COPPER',
     'XPD', 'SMH', 'IWM', 'EWZ', 'EWJ', 'GDX', 'EWT', 'XLE', 'XBI',
@@ -1659,13 +1688,15 @@
     const portfolioHtml = `
       <div class="home-card portfolio-card" id="portfolioCard">
         <div class="portfolio-label">내 투자</div>
-        <div class="portfolio-total">${formatNativeAmount(totalValueNative)}</div>
+        <div class="portfolio-total-row">
+          <div class="portfolio-total">${formatNativeAmount(totalValueNative)}</div>
+          <div class="portfolio-chevron">›</div>
+        </div>
         ${
           holdings.length
             ? `<div class="portfolio-pnl ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(totalPnlNative))} (${pnlSign}${Math.abs(totalPnlPct).toFixed(2)}%)</div>`
             : ''
         }
-        <div class="add-holding-link" id="addHoldingLink">+ 종목 담기</div>
       </div>
     `;
 
@@ -1762,17 +1793,11 @@
     const t = findTicker(h.symbol);
     if (!t) return '';
     const name = displayName(h.symbol);
-    const mult = LEVERAGE_MULTIPLIER[name];
     const pnlCls = s.pnlNative > 0 ? 'up' : s.pnlNative < 0 ? 'down' : '';
     const pnlSign = s.pnlNative > 0 ? '+' : s.pnlNative < 0 ? '-' : '';
-    const badgeHtml = editMode
-      ? `<button type="button" class="watchlist-remove-btn" data-remove="${h.symbol}">×</button>`
-      : mult
-        ? `<div class="holding-badge">${mult}x</div>`
-        : '';
     return `
-      <div class="holding-row" data-symbol="${h.symbol}" data-cat="${h.cat}">
-        <div class="holding-badge-slot">${badgeHtml}</div>
+      <div class="holding-row ${editMode ? 'holding-row-edit' : ''}" data-symbol="${h.symbol}" data-cat="${h.cat}">
+        ${editMode ? `<button type="button" class="holding-remove-btn" data-remove="${h.symbol}">×</button>` : ''}
         <div class="holding-info">
           <div class="holding-name">${name}</div>
           <div class="holding-sub">${h.qty.toLocaleString('ko-KR')}주</div>
@@ -1803,10 +1828,10 @@
             ? `<div class="portfolio-pnl ${pnlCls}">${pnlSign}${formatNativeAmount(Math.abs(totalPnlNative))} (${pnlSign}${Math.abs(totalPnlPct).toFixed(2)}%)</div>`
             : ''
         }
-        <div class="add-holding-link" id="portfolioAddLink">+ 종목 담기</div>
       </div>
     `;
 
+    const rowsHtml = stats.map(({ h, s }) => holdingRowHtml(h, s, portfolioEditMode)).join('');
     const listHtml = holdings.length
       ? `
       <div>
@@ -1814,14 +1839,15 @@
           <div class="home-section-title">보유 종목</div>
           <div class="home-edit-link" id="portfolioEditLink">${portfolioEditMode ? '완료' : '편집'}</div>
         </div>
-        <div class="list">
-          ${stats.map(({ h, s }) => holdingRowHtml(h, s, portfolioEditMode)).join('')}
+        <div class="${portfolioEditMode ? 'holding-edit-list' : 'list'}">
+          ${rowsHtml}
         </div>
       </div>
     `
       : '<div class="empty">담은 종목이 없어요.</div>';
+    const addLinkHtml = `<div class="add-holding-link-centered" id="portfolioAddLink">+ 종목 담기</div>`;
 
-    portfolioDetailBodyEl.innerHTML = summaryHtml + listHtml;
+    portfolioDetailBodyEl.innerHTML = summaryHtml + listHtml + addLinkHtml;
   }
 
   function openPortfolioDetail() {
@@ -2899,10 +2925,6 @@
   }
 
   listEl.addEventListener('click', (e) => {
-    if (e.target.closest('#addHoldingLink')) {
-      openAddHolding();
-      return;
-    }
     if (e.target.closest('#portfolioCard')) {
       openPortfolioDetail();
       return;
@@ -2942,7 +2964,7 @@
       renderPortfolioDetail();
       return;
     }
-    const removeBtn = e.target.closest('.watchlist-remove-btn');
+    const removeBtn = e.target.closest('.holding-remove-btn');
     if (removeBtn) {
       holdings = holdings.filter((h) => h.symbol !== removeBtn.dataset.remove);
       saveHoldings();
@@ -2997,6 +3019,7 @@
     saveHoldings();
     closeAddHolding();
     if (view === 'home') renderHome();
+    if (portfolioDetailPageEl.classList.contains('open')) renderPortfolioDetail();
   });
   addHoldingClose.addEventListener('click', closeAddHolding);
   addHoldingPageEl.addEventListener('click', (e) => {
