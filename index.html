@@ -208,9 +208,9 @@
   }
   .install-guide-step-num {
     flex: 0 0 auto;
-    font-size: 14px;
+    font-size: 19px;
     font-weight: 800;
-    color: var(--accent);
+    color: var(--ink);
     margin-top: 1px;
   }
   .install-guide-step-text {
@@ -246,6 +246,8 @@
     color: var(--ink-sub);
     font-size: 14px;
     border-radius: 50%;
+    background: var(--panel);
+    border: 1px solid var(--line);
   }
   .ig-mock-icon.ig-mock-highlight {
     color: var(--accent);
@@ -267,7 +269,8 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--line);
+    background: var(--panel);
+    border: 1px solid var(--line);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -590,6 +593,19 @@
   }
   .portfolio-pnl.up { color: var(--up); }
   .portfolio-pnl.down { color: var(--down); }
+  /* 홈 화면 "내 투자" 카드만 -- 라벨/금액/수익률 전부 같은 크기+굵기로 맞추고
+     강조는 색으로만 구분한다 (다른 카드의 .portfolio-label 등은 그대로 둔다). */
+  #portfolioCard .portfolio-label {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  #portfolioCard .portfolio-pnl {
+    font-size: 28px;
+    font-weight: 800;
+    margin-top: 4px;
+  }
   .add-holding-link {
     display: inline-block;
     margin-top: 12px;
