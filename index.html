@@ -467,6 +467,7 @@
     border-radius: 12px;
     background: var(--panel);
     color: var(--ink);
+    caret-color: var(--accent);
     font-family: inherit;
     font-size: 16px;
     box-sizing: border-box;
@@ -982,6 +983,7 @@
     border-radius: 12px;
     background: var(--panel);
     color: var(--ink);
+    caret-color: var(--accent);
     font-family: inherit;
     font-size: 16px;
     box-sizing: border-box;
@@ -4547,6 +4549,13 @@
         }
         dragging = true;
         behindEl.style.transition = 'none';
+        // WebKit's native text caret doesn't reliably track a CSS transform
+        // applied to an ancestor during an active touch-drag -- it visibly
+        // detaches from the input and drifts on its own. Blurring whatever's
+        // focused drops the caret before the drag transform kicks in below.
+        if (document.activeElement && overlayEl.contains(document.activeElement)) {
+          document.activeElement.blur();
+        }
       }
       e.preventDefault();
       overlayEl.style.transform = `translateX(${dx}px)`;
