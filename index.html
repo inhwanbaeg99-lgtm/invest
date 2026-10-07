@@ -2790,10 +2790,12 @@
     portfolioEditMode = false;
     renderPortfolioDetail();
     portfolioDetailPageEl.classList.add('open');
+    localStorage.setItem('tickr_portfolioOpen', '1');
   }
 
   function closePortfolioDetail() {
     portfolioDetailPageEl.classList.remove('open');
+    localStorage.removeItem('tickr_portfolioOpen');
   }
 
   // 해외뉴스 상태 (PR Newswire만) / 한국뉴스 상태 (연합뉴스 경제+마켓+ RSS) --
@@ -3660,11 +3662,17 @@
   navAllBtn.classList.toggle('active', view === 'all');
   navNewsBtn.classList.toggle('active', view === 'news');
   modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
-    b.classList.toggle('active', b.dataset.mode === mode);
+    const isActive = b.dataset.mode === mode;
+    b.classList.toggle('active', isActive);
+    if (isActive) b.scrollIntoView({ inline: 'center', block: 'nearest' });
   });
   moveNavHighlight(navButtonFor(view));
   applyViewVisibility();
   setTimeout(() => bottomNavBarEl.classList.add('ready'), 500);
+
+  if (localStorage.getItem('tickr_portfolioOpen') === '1') {
+    openPortfolioDetail();
+  }
 
   modeTabsEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.mode-tab');
