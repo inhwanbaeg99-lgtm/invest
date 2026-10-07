@@ -814,8 +814,6 @@
     display: flex;
     justify-content: center;
     gap: 6px;
-    margin-top: 16px;
-    margin-bottom: 12px;
   }
   .news-subtab-btn {
     flex: 0 0 auto;
@@ -1612,7 +1610,7 @@
           </svg>
         </button>
       </div>
-      <div class="mode-tabs-wrap">
+      <div class="mode-tabs-wrap" id="modeTabsWrap">
         <div class="mode-tabs" id="modeTabs">
           <button type="button" class="mode-tab active" data-mode="watchlist">관심종목</button>
           <button type="button" class="mode-tab" data-mode="domestic">국내주식</button>
@@ -1623,6 +1621,13 @@
         </div>
         <div class="tabs-fade tabs-fade-left" id="tabsFadeLeft"></div>
         <div class="tabs-fade tabs-fade-right" id="tabsFadeRight"></div>
+      </div>
+      <div class="mode-tabs-wrap" id="newsSubtabsWrap" style="display:none;">
+        <div class="news-subtabs" id="newsSubtabs">
+          <button type="button" class="news-subtab-btn" data-subtab="calendar">일정</button>
+          <button type="button" class="news-subtab-btn" data-subtab="kr">국내</button>
+          <button type="button" class="news-subtab-btn" data-subtab="global">해외</button>
+        </div>
       </div>
     </div>
     <div class="list" id="list">
@@ -2029,6 +2034,8 @@
   const listEl = document.getElementById('list');
   const updatedAtEl = document.getElementById('updatedAt');
   const modeTabsEl = document.getElementById('modeTabs');
+  const modeTabsWrapEl = document.getElementById('modeTabsWrap');
+  const newsSubtabsWrapEl = document.getElementById('newsSubtabsWrap');
   const tabsFadeLeftEl = document.getElementById('tabsFadeLeft');
   const tabsFadeRightEl = document.getElementById('tabsFadeRight');
   const searchIconBtn = document.getElementById('searchIconBtn');
@@ -2866,25 +2873,28 @@
     `;
   }
 
+  // 일정/국내/해외 버튼은 sticky 헤더(.top-header) 안의 고정 엘리먼트라 뉴스
+  // 본문과 같이 스크롤되지 않는다 -- 전체시세의 분류탭과 동일한 구조/간격/
+  // 그라데이션을 그대로 물려받기 위함. 활성 버튼 표시만 여기서 동기화.
+  function syncNewsSubtabButtons() {
+    newsSubtabsWrapEl.querySelectorAll('.news-subtab-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.subtab === newsSubTab);
+    });
+  }
+
   function renderNews() {
+    syncNewsSubtabButtons();
     if (!currentUser && !DEV_SKIP_LOGIN_GATE) {
       listEl.innerHTML = `<div class="home-card">${loginGateHtml('로그인하면 뉴스를 볼 수 있어요')}</div>`;
       return;
     }
-    const tabsHtml = `
-      <div class="news-subtabs">
-        <button type="button" class="news-subtab-btn ${newsSubTab === 'calendar' ? 'active' : ''}" data-subtab="calendar">일정</button>
-        <button type="button" class="news-subtab-btn ${newsSubTab === 'kr' ? 'active' : ''}" data-subtab="kr">국내</button>
-        <button type="button" class="news-subtab-btn ${newsSubTab === 'global' ? 'active' : ''}" data-subtab="global">해외</button>
-      </div>
-    `;
     if (newsSubTab === 'calendar') {
-      listEl.innerHTML = tabsHtml + renderEconCalendarHtml();
+      listEl.innerHTML = renderEconCalendarHtml();
       return;
     }
     const items = newsSubTab === 'kr' ? newsItemsKr : newsItemsGlobal;
     if (!items) {
-      listEl.innerHTML = `${tabsHtml}<div class="empty">뉴스를 불러오는 중...</div>`;
+      listEl.innerHTML = '<div class="empty">뉴스를 불러오는 중...</div>';
       if (newsSubTab === 'kr') loadNewsKr();
       else loadNewsGlobal();
       return;
@@ -2907,7 +2917,7 @@
         </div>
       </div>
     `;
-    listEl.innerHTML = tabsHtml + newsHtml;
+    listEl.innerHTML = newsHtml;
   }
 
   async function openNewsDetail(index) {
@@ -3345,11 +3355,19 @@
     const hideTabs = view === 'home' || view === 'news';
     searchIconBtn.style.display = hideTabs ? 'none' : '';
     if (hideTabs) closeSearch();
-    modeTabsEl.style.display = hideTabs ? 'none' : '';
+    modeTabsWrapEl.style.display = hideTabs ? 'none' : '';
+    newsSubtabsWrapEl.style.display = view === 'news' ? '' : 'none';
     listEl.classList.toggle('home-view', hideTabs || mode === 'watchlist');
     const appAlreadyInstalled = document.documentElement.classList.contains('pwa-standalone');
     appInstallBtn.style.display = view === 'home' && !appAlreadyInstalled ? '' : 'none';
   }
+
+  newsSubtabsWrapEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.news-subtab-btn');
+    if (!btn || btn.dataset.subtab === newsSubTab) return;
+    newsSubTab = btn.dataset.subtab;
+    renderNews();
+  });
 
   function openInstallGuide() {
     installGuideBackdrop.classList.add('open');
@@ -4295,15 +4313,6 @@
       saveWatchlist();
       if (!watchlist.length) watchlistTabEditMode = false;
       renderWatchlistTab();
-      return;
-    }
-    const newsSubtabBtn = e.target.closest('.news-subtab-btn');
-    if (newsSubtabBtn) {
-      const next = newsSubtabBtn.dataset.subtab;
-      if (next !== newsSubTab) {
-        newsSubTab = next;
-        renderNews();
-      }
       return;
     }
     const newsItem = e.target.closest('.news-item');
