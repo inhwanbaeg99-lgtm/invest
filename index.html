@@ -20,8 +20,8 @@
     --line: #e5e8eb;
     --ink: #191f28;
     --ink-sub: #8b95a1;
-    --up: #3182f6;
-    --down: #ff5c5c;
+    --up: #ff5c5c;
+    --down: #3182f6;
     --accent: #2ecc71;
     --safe-bottom: env(safe-area-inset-bottom);
   }
@@ -75,7 +75,7 @@
     border: 1px solid var(--line);
     border-radius: 999px;
     padding: 4px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     opacity: 0;
     transition: opacity 0.25s ease;
   }
@@ -121,10 +121,9 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: linear-gradient(to bottom, var(--bg) 55%, transparent 100%);
+    background: var(--bg);
     padding-top: calc(18px + env(safe-area-inset-top));
     padding-bottom: 16px;
-    margin-bottom: -16px;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
@@ -2871,9 +2870,9 @@
     }
     const tabsHtml = `
       <div class="news-subtabs">
-        <button type="button" class="news-subtab-btn ${newsSubTab === 'kr' ? 'active' : ''}" data-subtab="kr">한국뉴스</button>
-        <button type="button" class="news-subtab-btn ${newsSubTab === 'global' ? 'active' : ''}" data-subtab="global">해외뉴스</button>
-        <button type="button" class="news-subtab-btn ${newsSubTab === 'calendar' ? 'active' : ''}" data-subtab="calendar">지표 일정</button>
+        <button type="button" class="news-subtab-btn ${newsSubTab === 'calendar' ? 'active' : ''}" data-subtab="calendar">일정</button>
+        <button type="button" class="news-subtab-btn ${newsSubTab === 'kr' ? 'active' : ''}" data-subtab="kr">국내</button>
+        <button type="button" class="news-subtab-btn ${newsSubTab === 'global' ? 'active' : ''}" data-subtab="global">해외</button>
       </div>
     `;
     if (newsSubTab === 'calendar') {
@@ -3715,7 +3714,7 @@
     const max = Math.max(...closes);
     const range = max - min || 1;
     const up = closes[closes.length - 1] >= (refValue != null ? refValue : closes[startIdx]);
-    const color = up ? '#3182f6' : '#ff5c5c';
+    const color = up ? '#ff5c5c' : '#3182f6';
     const padTop = 56;
     const padBottom = 10;
     const usableH = h - padTop - padBottom;
