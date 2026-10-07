@@ -121,9 +121,10 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: var(--bg);
+    background: linear-gradient(to bottom, var(--bg) 55%, transparent 100%);
     padding-top: calc(18px + env(safe-area-inset-top));
     padding-bottom: 16px;
+    margin-bottom: -16px;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
@@ -525,7 +526,7 @@
     border-bottom: none;
   }
   .row:hover {
-    background: #1a1d22;
+    background: var(--bg);
   }
   .rank {
     font-size: 12px;
@@ -657,7 +658,7 @@
     padding: 0;
     border: none;
     border-radius: 999px;
-    background: var(--down);
+    background: #ff5c5c;
     color: #fff;
     font-size: 17px;
     line-height: 1;
@@ -679,7 +680,7 @@
     border-bottom: none;
   }
   .holding-row:hover {
-    background: #1a1d22;
+    background: var(--bg);
   }
   .holding-remove-btn {
     flex: 0 0 auto;
@@ -688,7 +689,7 @@
     padding: 0;
     border: none;
     border-radius: 999px;
-    background: var(--down);
+    background: #ff5c5c;
     color: #fff;
     font-size: 17px;
     line-height: 1;
@@ -813,6 +814,7 @@
     display: flex;
     justify-content: center;
     gap: 6px;
+    margin-top: 16px;
     margin-bottom: 12px;
   }
   .news-subtab-btn {
@@ -1197,10 +1199,10 @@
     flex: 0 0 auto;
   }
   .chart-heart-btn.active {
-    color: var(--down);
+    color: #ff5c5c;
   }
   .chart-heart-btn.active svg {
-    fill: var(--down);
+    fill: #ff5c5c;
   }
   .chart-symbol {
     font-size: 20px;
@@ -1469,6 +1471,7 @@
     flex: 0 0 auto;
     display: inline-flex;
     margin-top: 1px;
+    background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 999px;
     padding: 2px;
