@@ -1,9 +1,9 @@
-// Cloudflare Worker: Yahoo Finance + NewsAPI proxy for Tickr
+// Cloudflare Worker: Yahoo Finance + NewsAPI proxy for Stockie
 //
 // Browsers can't call Yahoo Finance's chart API directly (no CORS headers,
 // request just fails), and NewsAPI's free tier only allows requests from
 // localhost. This worker fetches both server-side (no CORS/origin issue
-// there) and re-serves the result with CORS enabled, so Tickr's frontend
+// there) and re-serves the result with CORS enabled, so Stockie's frontend
 // can read it from the deployed GitHub Pages domain too.
 //
 // Yahoo usage: GET https://<your-worker>.workers.dev/?symbols=^VIX,^TNX
@@ -95,7 +95,7 @@ async function newsProxy(url, env) {
   upstream.set('apiKey', env.NEWSAPI_KEY);
   try {
     const res = await fetch(`https://newsapi.org/v2/top-headlines?${upstream.toString()}`, {
-      headers: { 'User-Agent': 'TickrNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/)' },
+      headers: { 'User-Agent': 'StockieNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/)' },
       cf: { cacheTtl: 300, cacheEverything: true },
     });
     const data = await res.json();
@@ -105,7 +105,7 @@ async function newsProxy(url, env) {
   }
 }
 
-// Domains Tickr actually needs RSS/Atom feeds from. Keeping this an allowlist
+// Domains Stockie actually needs RSS/Atom feeds from. Keeping this an allowlist
 // (rather than fetching whatever `url` is given) stops the worker from being
 // usable as a general-purpose CORS-bypass proxy for arbitrary sites.
 const RSS_ALLOWED_HOSTS = ['www.prnewswire.com', 'www.globenewswire.com', 'www.sec.gov', 'www.yna.co.kr'];
@@ -129,7 +129,7 @@ async function rssProxy(url) {
       headers: {
         // SEC specifically requires an identifying User-Agent with contact info
         // (fair-access policy) or it 403s; the other two don't care either way.
-        'User-Agent': 'TickrNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/; contact: inhwanbaeg99@gmail.com)',
+        'User-Agent': 'StockieNewsProxy/1.0 (+https://inhwanbaeg99-lgtm.github.io/invest/; contact: inhwanbaeg99@gmail.com)',
         Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml',
       },
       cf: { cacheTtl: 300, cacheEverything: true },

@@ -1,6 +1,6 @@
 {
-  "name": "Tickr — 국내주식·미국주식·코인·원자재 실시간 시세",
-  "short_name": "Tickr",
+  "name": "Stockie — 국내주식·미국주식·코인·원자재 실시간 시세",
+  "short_name": "Stockie",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
