@@ -208,8 +208,8 @@
   }
   .install-guide-step-num {
     flex: 0 0 auto;
-    font-size: 19px;
-    font-weight: 800;
+    font-size: 14.5px;
+    font-weight: 700;
     color: var(--ink);
     margin-top: 1px;
   }
@@ -218,11 +218,11 @@
     font-size: 14.5px;
     font-weight: 700;
     line-height: 1.5;
-    color: var(--ink);
+    color: var(--ink-sub);
   }
   .install-guide-step-text b {
     font-weight: 700;
-    color: var(--accent);
+    color: var(--ink);
   }
   .ig-mock {
     margin-top: 10px;
@@ -309,14 +309,20 @@
     border-bottom: none;
   }
   .ig-action-icon {
-    font-size: 14px;
+    flex: 0 0 auto;
     width: 18px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-sub);
   }
   .ig-action-row.ig-mock-highlight {
     background: rgba(46, 204, 113, 0.12);
     color: var(--accent);
     font-weight: 700;
+  }
+  .ig-action-row.ig-mock-highlight .ig-action-icon {
+    color: var(--accent);
   }
   .ig-mock-topbar {
     padding: 8px 14px;
@@ -1899,15 +1905,15 @@
         <div class="install-guide-step-text">
           사파리 하단(또는 상단) <b>공유 버튼</b>을 눌러요
           <div class="ig-mock ig-mock-toolbar">
-            <span class="ig-mock-icon">‹</span>
-            <span class="ig-mock-icon">›</span>
+            <span class="ig-mock-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg></span>
+            <span class="ig-mock-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg></span>
             <span class="ig-mock-icon ig-mock-highlight">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 3v12" /><path d="M7 7l5-5 5 5" /><path d="M5 21h14" />
               </svg>
             </span>
-            <span class="ig-mock-icon">🔖</span>
-            <span class="ig-mock-icon">⧉</span>
+            <span class="ig-mock-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4V3z" /></svg></span>
+            <span class="ig-mock-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="13" height="13" rx="2" /><path d="M8 4h11a2 2 0 0 1 2 2v11" /></svg></span>
           </div>
         </div>
       </div>
@@ -1916,14 +1922,14 @@
         <div class="install-guide-step-text">
           아이콘 줄 오른쪽 끝 <b>'더보기'</b>를 눌러야 아래 목록이 열려요
           <div class="ig-mock ig-share-grid">
-            <div class="ig-share-item"><span class="ig-share-icon">📡</span><span class="ig-share-label">AirDrop</span></div>
-            <div class="ig-share-item"><span class="ig-share-icon">📖</span><span class="ig-share-label">도서</span></div>
-            <div class="ig-share-item"><span class="ig-share-icon">📝</span><span class="ig-share-label">메모</span></div>
-            <div class="ig-share-item"><span class="ig-share-icon">🔔</span><span class="ig-share-label">미리 알림</span></div>
-            <div class="ig-share-item"><span class="ig-share-icon">📋</span><span class="ig-share-label">복사</span></div>
-            <div class="ig-share-item"><span class="ig-share-icon">🔖</span><span class="ig-share-label">북마크에 추가</span></div>
-            <div class="ig-share-item"><span class="ig-share-icon">📑</span><span class="ig-share-label">읽기 목록 추가</span></div>
-            <div class="ig-share-item ig-mock-highlight"><span class="ig-share-icon">⋯</span><span class="ig-share-label">더보기</span></div>
+            <div class="ig-share-item"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12a9 9 0 0 1 14 0" /><path d="M8.5 15a5 5 0 0 1 7 0" /><circle cx="12" cy="18.2" r="1.1" fill="currentColor" stroke="none" /></svg></span><span class="ig-share-label">AirDrop</span></div>
+            <div class="ig-share-item"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5c3 0 6 1 6 1v13s-3-1-6-1V5z" /><path d="M21 5c-3 0-6 1-6 1v13s3-1 6-1V5z" /></svg></span><span class="ig-share-label">도서</span></div>
+            <div class="ig-share-item"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><line x1="8" y1="9" x2="16" y2="9" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="12" y2="17" /></svg></span><span class="ig-share-label">메모</span></div>
+            <div class="ig-share-item"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a6 6 0 1 1 12 0c0 4 2 5 2 5H4s2-1 2-5z" /><path d="M10 19a2 2 0 0 0 4 0" /></svg></span><span class="ig-share-label">미리 알림</span></div>
+            <div class="ig-share-item"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg></span><span class="ig-share-label">복사</span></div>
+            <div class="ig-share-item"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4V3z" /></svg></span><span class="ig-share-label">북마크에 추가</span></div>
+            <div class="ig-share-item"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="20" y2="12" /><line x1="8" y1="18" x2="20" y2="18" /><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none" /><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none" /></svg></span><span class="ig-share-label">읽기 목록 추가</span></div>
+            <div class="ig-share-item ig-mock-highlight"><span class="ig-share-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="6" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="18" cy="12" r="1.5" /></svg></span><span class="ig-share-label">더보기</span></div>
           </div>
         </div>
       </div>
@@ -1932,11 +1938,11 @@
         <div class="install-guide-step-text">
           목록에서 <b>'홈 화면에 추가'</b>를 선택해요
           <div class="ig-mock ig-action-list">
-            <div class="ig-action-row"><span class="ig-action-icon">⭐</span>즐겨찾기에 추가</div>
-            <div class="ig-action-row"><span class="ig-action-icon">☰</span>빠른 메모에 추가</div>
-            <div class="ig-action-row"><span class="ig-action-icon">🔍</span>페이지에서 찾기</div>
-            <div class="ig-action-row ig-mock-highlight"><span class="ig-action-icon">➕</span>홈 화면에 추가</div>
-            <div class="ig-action-row"><span class="ig-action-icon">✏️</span>마크업</div>
+            <div class="ig-action-row"><span class="ig-action-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3 9.4l6-.8L12 3z" /></svg></span>즐겨찾기에 추가</div>
+            <div class="ig-action-row"><span class="ig-action-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /></svg></span>빠른 메모에 추가</div>
+            <div class="ig-action-row"><span class="ig-action-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg></span>페이지에서 찾기</div>
+            <div class="ig-action-row ig-mock-highlight"><span class="ig-action-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg></span>홈 화면에 추가</div>
+            <div class="ig-action-row"><span class="ig-action-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg></span>마크업</div>
           </div>
         </div>
       </div>
