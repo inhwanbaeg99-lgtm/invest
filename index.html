@@ -2660,6 +2660,11 @@
   // 해외뉴스 상태 (PR Newswire만) / 한국뉴스 상태 (연합뉴스 경제+마켓+ RSS) --
   // 둘을 따로 로드/표시하므로 완전히 분리된 state 쌍으로 관리.
   let newsSubTab = 'calendar'; // 'kr' | 'global' | 'calendar'
+  // Only auto-scroll past the faded/지난 events once per fresh arrival at the
+  // calendar tab -- reset to false on arrival, set true right after the jump
+  // so the periodic re-render (every REFRESH_MS tick) doesn't keep yanking the
+  // user's scroll position back to today while they're reading.
+  let newsCalendarScrolled = false;
   let newsItemsKr = null;
   let newsItemsGlobal = null;
   let newsLoadingKr = false;
@@ -2873,6 +2878,16 @@
     `;
   }
 
+  // 지난 일정을 넘기고 오늘(또는 다가오는) 일정이 화면 맨 위에 오도록 점프 --
+  // sticky 헤더 높이만큼 보정해서 그 바로 아래에 닿게 한다.
+  function scrollEconCalendarToToday() {
+    const target = listEl.querySelector('.econ-cal-date-group:not(.is-past)');
+    if (!target) return;
+    const headerH = document.querySelector('.top-header').getBoundingClientRect().height;
+    const targetTop = target.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, Math.max(0, targetTop - headerH - 8));
+  }
+
   // 일정/국내/해외 버튼은 sticky 헤더(.top-header) 안의 고정 엘리먼트라 뉴스
   // 본문과 같이 스크롤되지 않는다 -- 전체시세의 분류탭과 동일한 구조/간격/
   // 그라데이션을 그대로 물려받기 위함. 활성 버튼 표시만 여기서 동기화.
@@ -2890,6 +2905,10 @@
     }
     if (newsSubTab === 'calendar') {
       listEl.innerHTML = renderEconCalendarHtml();
+      if (!newsCalendarScrolled) {
+        scrollEconCalendarToToday();
+        newsCalendarScrolled = true;
+      }
       return;
     }
     const items = newsSubTab === 'kr' ? newsItemsKr : newsItemsGlobal;
@@ -3366,6 +3385,7 @@
     const btn = e.target.closest('.news-subtab-btn');
     if (!btn || btn.dataset.subtab === newsSubTab) return;
     newsSubTab = btn.dataset.subtab;
+    if (newsSubTab === 'calendar') newsCalendarScrolled = false;
     renderNews();
   });
 
@@ -3404,6 +3424,7 @@
   function setView(next) {
     if (view === next) return;
     view = next;
+    if (next === 'news') newsCalendarScrolled = false;
     navHomeBtn.classList.toggle('active', view === 'home');
     navAllBtn.classList.toggle('active', view === 'all');
     navNewsBtn.classList.toggle('active', view === 'news');
