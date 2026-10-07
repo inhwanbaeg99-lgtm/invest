@@ -187,6 +187,19 @@
     justify-content: center;
     cursor: pointer;
   }
+  .app-install-btn {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
   .install-guide-backdrop {
     position: fixed;
     inset: 0;
@@ -268,6 +281,81 @@
     color: var(--ink);
   }
   .install-guide-step-text b {
+    font-weight: 800;
+  }
+  .ig-mock {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .ig-mock-toolbar,
+  .ig-mock-sheet-row {
+    gap: 6px;
+    padding: 8px 12px;
+    justify-content: space-between;
+  }
+  .ig-mock-icon {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-sub);
+    font-size: 14px;
+    border-radius: 50%;
+  }
+  .ig-mock-icon.ig-mock-highlight {
+    color: var(--accent);
+    background: rgba(79, 209, 197, 0.18);
+  }
+  .ig-mock-dot {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--line);
+  }
+  .ig-mock-more {
+    flex: 0 0 auto;
+    width: 46px;
+    height: 24px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-sub);
+  }
+  .ig-mock-more.ig-mock-highlight {
+    color: var(--accent);
+    background: rgba(79, 209, 197, 0.18);
+  }
+  .ig-mock-list-row {
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(79, 209, 197, 0.12);
+    border-color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .ig-mock-plus {
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .ig-mock-topbar {
+    padding: 8px 14px;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--ink-sub);
+  }
+  .ig-mock-topbar .ig-accent {
+    color: var(--accent);
     font-weight: 800;
   }
   .mode-tabs-wrap {
@@ -1514,8 +1602,8 @@
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </button>
-        <button type="button" class="search-icon-btn" id="appInstallBtn" aria-label="앱 설치 안내" style="display:none;">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <button type="button" class="app-install-btn" id="appInstallBtn" aria-label="앱 설치 안내" style="display:none;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3v12" />
             <path d="M7 10l5 5 5-5" />
             <path d="M5 21h14" />
@@ -1801,19 +1889,51 @@
       </div>
       <div class="install-guide-step">
         <div class="install-guide-step-num">1</div>
-        <div class="install-guide-step-text">사파리 하단(또는 상단) <b>공유 버튼</b>을 눌러요</div>
+        <div class="install-guide-step-text">
+          사파리 하단(또는 상단) <b>공유 버튼</b>을 눌러요
+          <div class="ig-mock ig-mock-toolbar">
+            <span class="ig-mock-icon">‹</span>
+            <span class="ig-mock-icon">›</span>
+            <span class="ig-mock-icon ig-mock-highlight">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v12" /><path d="M7 7l5-5 5 5" /><path d="M5 21h14" />
+              </svg>
+            </span>
+            <span class="ig-mock-icon">🔖</span>
+            <span class="ig-mock-icon">⧉</span>
+          </div>
+        </div>
       </div>
       <div class="install-guide-step">
         <div class="install-guide-step-num">2</div>
-        <div class="install-guide-step-text">아이콘 줄 오른쪽 끝 <b>'더보기'</b>를 눌러야 아래 목록이 열려요</div>
+        <div class="install-guide-step-text">
+          아이콘 줄 오른쪽 끝 <b>'더보기'</b>를 눌러야 아래 목록이 열려요
+          <div class="ig-mock ig-mock-sheet-row">
+            <span class="ig-mock-dot"></span>
+            <span class="ig-mock-dot"></span>
+            <span class="ig-mock-dot"></span>
+            <span class="ig-mock-more ig-mock-highlight">더보기</span>
+          </div>
+        </div>
       </div>
       <div class="install-guide-step">
         <div class="install-guide-step-num">3</div>
-        <div class="install-guide-step-text">목록에서 <b>'홈 화면에 추가'</b>를 선택해요</div>
+        <div class="install-guide-step-text">
+          목록에서 <b>'홈 화면에 추가'</b>를 선택해요
+          <div class="ig-mock ig-mock-list-row">
+            <span class="ig-mock-plus">+</span> 홈 화면에 추가
+          </div>
+        </div>
       </div>
       <div class="install-guide-step">
         <div class="install-guide-step-num">4</div>
-        <div class="install-guide-step-text">오른쪽 위 <b>'추가'</b>를 누르면 완료!</div>
+        <div class="install-guide-step-text">
+          오른쪽 위 <b>'추가'</b>를 누르면 완료!
+          <div class="ig-mock ig-mock-topbar">
+            <span>취소</span>
+            <span class="ig-accent">추가</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -3225,7 +3345,8 @@
     if (hideTabs) closeSearch();
     modeTabsEl.style.display = hideTabs ? 'none' : '';
     listEl.classList.toggle('home-view', hideTabs || mode === 'watchlist');
-    appInstallBtn.style.display = view === 'home' ? '' : 'none';
+    const appAlreadyInstalled = document.documentElement.classList.contains('pwa-standalone');
+    appInstallBtn.style.display = view === 'home' && !appAlreadyInstalled ? '' : 'none';
   }
 
   function openInstallGuide() {
