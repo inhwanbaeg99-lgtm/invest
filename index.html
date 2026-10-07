@@ -1002,16 +1002,6 @@
     line-height: 1.4;
     min-width: 0;
   }
-  .econ-cal-tag {
-    flex: 0 0 auto;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--accent);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 2px 7px;
-  }
 
   /* ---------- Add holding overlay ---------- */
   .add-holding-page {
@@ -2986,20 +2976,6 @@
     return { numLabel, weekdayLabel: isToday ? '오늘' : weekday, isToday, isPast: dateStr < todayStr };
   }
 
-  // 태그마다 다른 색을 줘서 한눈에 구분되게 -- 공포·탐욕 게이지와 같은 5색
-  // 팔레트를 재사용, 7개 태그를 거기에 분산 배치.
-  const ECON_CAL_TAG_COLORS = {
-    고용: '#ff3b30',
-    연준: '#ff9500',
-    물가: '#f2d000',
-    경기: '#a8d400',
-    에너지: '#2ecc71',
-    소비: '#ff9500',
-    주택: '#f2d000',
-  };
-  function econCalTagColor(tag) {
-    return ECON_CAL_TAG_COLORS[tag] || 'var(--accent)';
-  }
 
   function renderEconCalendarHtml() {
     const grouped = new Map();
@@ -3025,7 +3001,6 @@
                     <div class="econ-cal-row">
                       <div class="econ-cal-time">${e.time}</div>
                       <div class="econ-cal-title">${e.title}</div>
-                      <div class="econ-cal-tag" style="color:${econCalTagColor(e.tag)}">${e.tag}</div>
                     </div>
                   `,
                 )
