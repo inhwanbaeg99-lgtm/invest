@@ -2652,7 +2652,7 @@
 
   // 해외뉴스 상태 (PR Newswire만) / 한국뉴스 상태 (연합뉴스 경제+마켓+ RSS) --
   // 둘을 따로 로드/표시하므로 완전히 분리된 state 쌍으로 관리.
-  let newsSubTab = 'kr'; // 'kr' | 'global'
+  let newsSubTab = 'calendar'; // 'kr' | 'global' | 'calendar'
   let newsItemsKr = null;
   let newsItemsGlobal = null;
   let newsLoadingKr = false;
@@ -4366,11 +4366,13 @@
     ahoActiveField = 'qty';
     renderAho();
   });
-  [ahoPriceKrwLineEl, ahoPriceUsdLineEl, ahoQtyLineEl].forEach((el) => {
-    el.addEventListener('click', (e) => {
-      const tap = e.target.closest('.dca-field-tap');
-      if (!tap) return;
-      ahoActiveField = tap.dataset.field;
+  [
+    [ahoPriceKrwLineEl, 'priceKrw'],
+    [ahoPriceUsdLineEl, 'priceUsd'],
+    [ahoQtyLineEl, 'qty'],
+  ].forEach(([el, field]) => {
+    el.addEventListener('click', () => {
+      ahoActiveField = field;
       renderAho();
     });
   });
