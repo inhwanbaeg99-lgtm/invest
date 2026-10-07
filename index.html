@@ -3654,13 +3654,12 @@
       newsSubTab = 'calendar';
       localStorage.setItem('tickr_newsSubTab', newsSubTab);
     }
-    if (next === 'all' && mode !== 'domestic') {
+    const modeWasReset = next === 'all' && mode !== 'domestic';
+    if (modeWasReset) {
       mode = 'domestic';
       localStorage.setItem('tickr_mode', mode);
       modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
-        const isActive = b.dataset.mode === mode;
-        b.classList.toggle('active', isActive);
-        if (isActive) b.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        b.classList.toggle('active', b.dataset.mode === mode);
       });
     }
     navHomeBtn.classList.toggle('active', view === 'home');
@@ -3668,6 +3667,10 @@
     navNewsBtn.classList.toggle('active', view === 'news');
     moveNavHighlight(navButtonFor(view));
     applyViewVisibility();
+    if (modeWasReset) {
+      const activeBtn = modeTabsEl.querySelector('.mode-tab.active');
+      if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
     renderCurrent();
   }
 
@@ -3675,12 +3678,12 @@
   navAllBtn.classList.toggle('active', view === 'all');
   navNewsBtn.classList.toggle('active', view === 'news');
   modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
-    const isActive = b.dataset.mode === mode;
-    b.classList.toggle('active', isActive);
-    if (isActive) b.scrollIntoView({ inline: 'center', block: 'nearest' });
+    b.classList.toggle('active', b.dataset.mode === mode);
   });
   moveNavHighlight(navButtonFor(view));
   applyViewVisibility();
+  const initialActiveModeBtn = modeTabsEl.querySelector('.mode-tab.active');
+  if (initialActiveModeBtn) initialActiveModeBtn.scrollIntoView({ inline: 'center', block: 'nearest' });
   setTimeout(() => bottomNavBarEl.classList.add('ready'), 500);
 
   if (localStorage.getItem('tickr_portfolioOpen') === '1') {
