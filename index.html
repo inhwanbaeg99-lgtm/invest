@@ -1810,7 +1810,7 @@
           <button type="button" class="dca-keypad-btn" data-key="7">7</button>
           <button type="button" class="dca-keypad-btn" data-key="8">8</button>
           <button type="button" class="dca-keypad-btn" data-key="9">9</button>
-          <button type="button" class="dca-keypad-btn" data-key="00">00</button>
+          <button type="button" class="dca-keypad-btn" data-key=".">.</button>
           <button type="button" class="dca-keypad-btn" data-key="0">0</button>
           <button type="button" class="dca-keypad-btn dca-keypad-back" data-key="back" aria-label="지우기">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2160,16 +2160,19 @@
       GOOGL: '알파벳(구글)', AMZN: '아마존', NFLX: '넷플릭스', ORCL: '오라클', ADBE: '어도비',
       CRM: '세일즈포스', IBM: 'IBM', INTC: '인텔', QCOM: '퀄컴', AVGO: '브로드컴',
       AMD: 'AMD', AMAT: '어플라이드머티리얼즈', ASML: 'ASML', TSM: 'TSMC', DELL: '델',
-      PYPL: '페이팔', GS: '골드만삭스', BABA: '알리바바', COIN: '코인베이스', MSTR: '마이크로스트래티지',
+      PYPL: '페이팔', GS: '골드만삭스', BABA: '알리바바', COIN: '코인베이스', MSTR: '스트래티지',
       HOOD: '로빈후드', PLTR: '팔란티어', CRWD: '크라우드스트라이크', SMCI: '슈퍼마이크로', NOK: '노키아',
       WDC: '웨스턴디지털', ZM: '줌', AMC: 'AMC', GME: '게임스탑', DJT: '트럼프미디어',
-      RDDT: '레딧', PDD: '핀둬둬', HIMS: '힘스앤허스', ARM: 'ARM홀딩스', MRVL: '마벨',
+      RDDT: '레딧', PDD: '핀둬둬', HIMS: '힘스앤허스', ARM: 'ARM홀딩스', MRVL: '마벨 테크놀리지',
       GLW: '코닝', MRNA: '모더나', UBER: '우버', DIS: '디즈니', CSCO: '시스코',
       HD: '홈디포', WMT: '월마트', JPM: 'JP모건', V: '비자', LLY: '일라이릴리',
       KO: '코카콜라', NKE: '나이키', COST: '코스트코', UNH: '유나이티드헬스', CAT: '캐터필러',
       SOFI: '소파이', SHOP: '쇼피파이', SNOW: '스노우플레이크', NET: '클라우드플레어', DDOG: '데이터독',
-      PANW: '팔로알토네트웍스', SNDK: '샌디스크', MU: '마이크론', KLAC: 'KLA', LRCX: '램리서치',
+      PANW: '팔로알토네트웍스', SNDK: '샌디스크', MU: '마이크론 테크놀리지', KLAC: 'KLA', LRCX: '램리서치',
       CVNA: '카바나', RIVN: '리비안', RKLB: '로켓랩', IONQ: '아이온큐', SONY: '소니',
+      SPCX: '스페이스X', SKHY: 'SK하이닉스(ADR)', CRCL: '써클 인터넷 그룹', NBIS: '네비우스 그룹',
+      DRAM: '라운드힐 메모리 ETF', AAOI: '어플라이드 옵토일렉트로닉스', LITE: '루멘텀 홀딩스',
+      SNXX: '샌디스크 2배', MVLL: '마벨 테크놀리지 2배', MUU: '마이크론 테크놀리지 2배',
     },
     leverage: {
       SOXL: '반도체 3배 레버리지 ETF', SOXS: '반도체 3배 인버스 ETF',
@@ -3220,10 +3223,9 @@
     });
   }
 
-  // The keypad has no decimal key (matches the DCA page's keypad) -- plain
-  // digit append/backspace only.
   function appendAhoDigit(current, key) {
     if (key === 'back') return current.slice(0, -1);
+    if (key === '.' && current.includes('.')) return current;
     return current.length < 14 ? current + key : current;
   }
 
