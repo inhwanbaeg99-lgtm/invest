@@ -2291,8 +2291,12 @@
     },
   };
 
-  let mode = 'domestic';
-  let view = 'home';
+  const VALID_MODES = ['watchlist', 'domestic', 'us', 'leverage', 'crypto', 'index'];
+  const VALID_VIEWS = ['home', 'all', 'news'];
+  const savedMode = localStorage.getItem('tickr_mode');
+  const savedView = localStorage.getItem('tickr_view');
+  let mode = VALID_MODES.includes(savedMode) ? savedMode : 'domestic';
+  let view = VALID_VIEWS.includes(savedView) ? savedView : 'home';
   let currency = 'KRW';
   let krwRate = null;
   let fullTickers = [];
@@ -2794,7 +2798,8 @@
 
   // 해외뉴스 상태 (PR Newswire만) / 한국뉴스 상태 (연합뉴스 경제+마켓+ RSS) --
   // 둘을 따로 로드/표시하므로 완전히 분리된 state 쌍으로 관리.
-  let newsSubTab = 'calendar'; // 'kr' | 'global' | 'calendar'
+  const savedNewsSubTab = localStorage.getItem('tickr_newsSubTab');
+  let newsSubTab = ['kr', 'global', 'calendar'].includes(savedNewsSubTab) ? savedNewsSubTab : 'calendar'; // 'kr' | 'global' | 'calendar'
   // Only auto-scroll past the faded/지난 events once per fresh arrival at the
   // calendar tab -- reset to false on arrival, set true right after the jump
   // so the periodic re-render (every REFRESH_MS tick) doesn't keep yanking the
@@ -3586,6 +3591,7 @@
     const btn = e.target.closest('.news-subtab-btn');
     if (!btn || btn.dataset.subtab === newsSubTab) return;
     newsSubTab = btn.dataset.subtab;
+    localStorage.setItem('tickr_newsSubTab', newsSubTab);
     if (newsSubTab === 'calendar') newsCalendarScrolled = false;
     renderNews();
   });
@@ -3617,11 +3623,13 @@
 
   function setMode(next) {
     view = 'all';
+    localStorage.setItem('tickr_view', view);
     navAllBtn.classList.add('active');
     navHomeBtn.classList.remove('active');
     navNewsBtn.classList.remove('active');
     if (mode !== next) {
       mode = next;
+      localStorage.setItem('tickr_mode', mode);
       let activeBtn = null;
       modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
         const isActive = b.dataset.mode === mode;
@@ -3638,6 +3646,7 @@
   function setView(next) {
     if (view === next) return;
     view = next;
+    localStorage.setItem('tickr_view', view);
     if (next === 'news') newsCalendarScrolled = false;
     navHomeBtn.classList.toggle('active', view === 'home');
     navAllBtn.classList.toggle('active', view === 'all');
@@ -3647,6 +3656,12 @@
     renderCurrent();
   }
 
+  navHomeBtn.classList.toggle('active', view === 'home');
+  navAllBtn.classList.toggle('active', view === 'all');
+  navNewsBtn.classList.toggle('active', view === 'news');
+  modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
   moveNavHighlight(navButtonFor(view));
   applyViewVisibility();
   setTimeout(() => bottomNavBarEl.classList.add('ready'), 500);
