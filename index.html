@@ -641,6 +641,7 @@
   }
   .news-subtabs {
     display: flex;
+    justify-content: center;
     gap: 6px;
     margin-bottom: 12px;
   }
@@ -656,6 +657,10 @@
     font-size: 12.5px;
     font-weight: 700;
     cursor: pointer;
+    white-space: nowrap;
+    box-shadow: none;
+    appearance: none;
+    -webkit-appearance: none;
   }
   .news-subtab-btn.active {
     background: var(--accent);
@@ -2356,8 +2361,8 @@
 
   // 연합뉴스 경제/마켓+(증시·금융) 공개 RSS -- 둘 다 이미 한국어라 번역 불필요.
   const KR_FEED_SOURCES = [
-    { name: '연합뉴스 경제', url: 'https://www.yna.co.kr/rss/economy.xml', format: 'rss', lang: 'ko' },
-    { name: '연합뉴스 마켓+', url: 'https://www.yna.co.kr/rss/market.xml', format: 'rss', lang: 'ko' },
+    { name: '연합뉴스', url: 'https://www.yna.co.kr/rss/economy.xml', format: 'rss', lang: 'ko' },
+    { name: '연합뉴스', url: 'https://www.yna.co.kr/rss/market.xml', format: 'rss', lang: 'ko' },
   ];
 
   function parseFeedXml(xmlText, format) {
