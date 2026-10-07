@@ -569,8 +569,8 @@
     color: var(--line);
   }
   .info-page-body {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
+    max-height: 100%;
     font-size: 14px;
     line-height: 1.6;
     color: var(--ink-sub);
@@ -827,6 +827,7 @@
     margin-top: 2px;
     font-size: 12px;
     font-weight: 700;
+    color: var(--ink);
   }
   .news-list {
     margin-top: 8px;
@@ -2042,9 +2043,9 @@
       </div>
       <div class="info-page-body home-card">
         <div class="info-page-title">개인정보 처리방침</div>
-        <p><b>1. 투자 정보</b><br>보유 종목, 수량, 매입가, 관심종목 등 직접 입력하신 투자 정보는 서버로 전송되지 않고 사용 중인 기기의 브라우저(localStorage)에만 저장됩니다. 다른 기기와 공유되지 않으며, 브라우저 데이터를 지우면 함께 삭제됩니다.</p>
-        <p><b>2. 시세 데이터</b><br>실시간 시세, 뉴스, 환율 등은 외부 시세 제공처에서 받아오며, 이 과정에서 이용자의 개인정보는 전송되지 않습니다.</p>
-        <p><b>3. 문의</b><br>개인정보와 관련한 문의사항은 아래 이메일로 연락해주세요.</p>
+        <p><b>투자 정보</b><br>보유 종목, 수량, 매입가, 관심종목 등 직접 입력하신 투자 정보는 서버로 전송되지 않고 사용 중인 기기의 브라우저(localStorage)에만 저장됩니다. 다른 기기와 공유되지 않으며, 브라우저 데이터를 지우면 함께 삭제됩니다.</p>
+        <p><b>시세 데이터</b><br>실시간 시세, 뉴스, 환율 등은 외부 시세 제공처에서 받아오며, 이 과정에서 이용자의 개인정보는 전송되지 않습니다.</p>
+        <p><b>문의</b><br>개인정보와 관련한 문의사항은 아래 이메일로 연락해주세요.</p>
         <div class="info-page-contact">문의: <a href="mailto:inhwanbaeg99@gmail.com">inhwanbaeg99@gmail.com</a></div>
       </div>
     </div>
@@ -2680,21 +2681,13 @@
 
     // 게이지 호의 5단계 색과 완전히 같은 기준으로 라벨 색을 고른다 (fngGaugeSvg의
     // segments와 동일한 구간) -- 공포/탐욕 이진 분류가 아니라 값 위치 그대로.
-    function fngValueColor(v) {
-      if (v < 20) return '#ff3b30';
-      if (v < 40) return '#ff9500';
-      if (v < 60) return '#f2d000';
-      if (v < 80) return '#a8d400';
-      return '#2ecc71';
-    }
-
     function fngCardHtml(label, fng) {
       return `
         <div class="fng-card">
           <div class="indicator-label">${label}</div>
           ${fng ? fngGaugeSvg(fng.value) : ''}
           <div class="fng-value">${fng ? fng.value : '-'}</div>
-          ${fng ? `<div class="fng-label" style="color:${fngValueColor(fng.value)}">${FNG_LABELS_KR[fng.label] || fng.label}</div>` : ''}
+          ${fng ? `<div class="fng-label">${FNG_LABELS_KR[fng.label] || fng.label}</div>` : ''}
         </div>
       `;
     }
@@ -2958,6 +2951,21 @@
     return { numLabel, weekdayLabel: isToday ? '오늘' : weekday, isToday, isPast: dateStr < todayStr };
   }
 
+  // 태그마다 다른 색을 줘서 한눈에 구분되게 -- 공포·탐욕 게이지와 같은 5색
+  // 팔레트를 재사용, 7개 태그를 거기에 분산 배치.
+  const ECON_CAL_TAG_COLORS = {
+    고용: '#ff3b30',
+    연준: '#ff9500',
+    물가: '#f2d000',
+    경기: '#a8d400',
+    에너지: '#2ecc71',
+    소비: '#ff9500',
+    주택: '#f2d000',
+  };
+  function econCalTagColor(tag) {
+    return ECON_CAL_TAG_COLORS[tag] || 'var(--accent)';
+  }
+
   function renderEconCalendarHtml() {
     const grouped = new Map();
     ECON_CALENDAR.slice()
@@ -2982,7 +2990,7 @@
                     <div class="econ-cal-row">
                       <div class="econ-cal-time">${e.time}</div>
                       <div class="econ-cal-title">${e.title}</div>
-                      <div class="econ-cal-tag">${e.tag}</div>
+                      <div class="econ-cal-tag" style="color:${econCalTagColor(e.tag)}">${e.tag}</div>
                     </div>
                   `,
                 )
