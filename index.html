@@ -3649,7 +3649,20 @@
     if (view === next) return;
     view = next;
     localStorage.setItem('tickr_view', view);
-    if (next === 'news') newsCalendarScrolled = false;
+    if (next === 'news') {
+      newsCalendarScrolled = false;
+      newsSubTab = 'calendar';
+      localStorage.setItem('tickr_newsSubTab', newsSubTab);
+    }
+    if (next === 'all' && mode !== 'domestic') {
+      mode = 'domestic';
+      localStorage.setItem('tickr_mode', mode);
+      modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
+        const isActive = b.dataset.mode === mode;
+        b.classList.toggle('active', isActive);
+        if (isActive) b.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      });
+    }
     navHomeBtn.classList.toggle('active', view === 'home');
     navAllBtn.classList.toggle('active', view === 'all');
     navNewsBtn.classList.toggle('active', view === 'news');
