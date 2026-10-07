@@ -8,21 +8,21 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icons/icon-192.png" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-<meta name="theme-color" content="#0a0b0d" />
+<meta name="theme-color" content="#f2f4f6" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Tickr" />
 <title>Tickr</title>
 <style>
   :root {
-    --bg: #0a0b0d;
-    --panel: #121418;
-    --line: #22252b;
-    --ink: #eef0f2;
-    --ink-sub: #8a8f98;
-    --up: #2ecc71;
+    --bg: #f2f4f6;
+    --panel: #ffffff;
+    --line: #e5e8eb;
+    --ink: #191f28;
+    --ink-sub: #8b95a1;
+    --up: #3182f6;
     --down: #ff5c5c;
-    --accent: #4fd1c5;
+    --accent: #2ecc71;
     --safe-bottom: env(safe-area-inset-bottom);
   }
   html.pwa-standalone {
@@ -310,7 +310,7 @@
   }
   .ig-mock-icon.ig-mock-highlight {
     color: var(--accent);
-    background: rgba(79, 209, 197, 0.18);
+    background: rgba(46, 204, 113, 0.18);
   }
   .ig-mock-dot {
     width: 24px;
@@ -333,12 +333,12 @@
   }
   .ig-mock-more.ig-mock-highlight {
     color: var(--accent);
-    background: rgba(79, 209, 197, 0.18);
+    background: rgba(46, 204, 113, 0.18);
   }
   .ig-mock-list-row {
     gap: 8px;
     padding: 10px 14px;
-    background: rgba(79, 209, 197, 0.12);
+    background: rgba(46, 204, 113, 0.12);
     border-color: var(--accent);
     font-size: 13px;
     font-weight: 700;
@@ -803,8 +803,8 @@
     font-weight: 700;
     color: var(--ink-sub);
   }
-  .fng-label.up { color: var(--up); }
-  .fng-label.down { color: var(--down); }
+  .fng-label.greed { color: var(--accent); }
+  .fng-label.fear { color: var(--down); }
   .news-list {
     margin-top: 8px;
     display: flex;
@@ -2557,7 +2557,7 @@
     }
 
     function fngCardHtml(label, fng) {
-      const cls = fng ? (fng.label.includes('fear') ? 'down' : fng.label.includes('greed') ? 'up' : '') : '';
+      const cls = fng ? (fng.label.includes('fear') ? 'fear' : fng.label.includes('greed') ? 'greed' : '') : '';
       return `
         <div class="fng-card">
           <div class="indicator-label">${label}</div>
@@ -3715,7 +3715,7 @@
     const max = Math.max(...closes);
     const range = max - min || 1;
     const up = closes[closes.length - 1] >= (refValue != null ? refValue : closes[startIdx]);
-    const color = up ? '#2ecc71' : '#ff5c5c';
+    const color = up ? '#3182f6' : '#ff5c5c';
     const padTop = 56;
     const padBottom = 10;
     const usableH = h - padTop - padBottom;
@@ -3748,7 +3748,7 @@
       ctx.beginPath();
       ctx.moveTo(points[0][0], points[0][1]);
       for (let i = 0; i <= startIdx; i++) ctx.lineTo(points[i][0], points[i][1]);
-      ctx.strokeStyle = '#8a8f9880';
+      ctx.strokeStyle = '#8b95a180';
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.stroke();
@@ -3776,7 +3776,7 @@
       ctx.beginPath();
       ctx.moveTo(points[sessionEndIdx][0], points[sessionEndIdx][1]);
       for (let i = sessionEndIdx; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-      ctx.strokeStyle = '#8a8f9880';
+      ctx.strokeStyle = '#8b95a180';
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.stroke();
@@ -3790,7 +3790,7 @@
       ctx.arc(lastPt[0], lastPt[1], 4, 0, Math.PI * 2);
       ctx.fillStyle = color;
       ctx.fill();
-      ctx.strokeStyle = '#0a0b0d';
+      ctx.strokeStyle = '#f2f4f6';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
@@ -3798,7 +3798,7 @@
     if (hoverIdx != null && points[hoverIdx]) {
       const [hx] = points[hoverIdx];
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.strokeStyle = 'rgba(25,31,40,0.35)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(hx, 0);
