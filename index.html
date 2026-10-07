@@ -553,6 +553,7 @@
   }
   .home-footer-links {
     margin-top: 14px;
+    margin-bottom: 24px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -568,6 +569,8 @@
     color: var(--line);
   }
   .info-page-body {
+    flex: 1 1 auto;
+    min-height: 0;
     font-size: 14px;
     line-height: 1.6;
     color: var(--ink-sub);
@@ -824,10 +827,7 @@
     margin-top: 2px;
     font-size: 12px;
     font-weight: 700;
-    color: var(--ink-sub);
   }
-  .fng-label.greed { color: var(--accent); }
-  .fng-label.fear { color: var(--down); }
   .news-list {
     margin-top: 8px;
     display: flex;
@@ -840,6 +840,7 @@
   }
   .news-subtab-btn {
     flex: 0 0 auto;
+    width: 77.25px;
     height: 36px;
     padding: 0 16px;
     border: 1px solid var(--line);
@@ -1689,6 +1690,11 @@
       <div class="empty">불러오는 중...</div>
     </div>
     <div class="footer-note" id="updatedAt">불러오는 중...</div>
+    <div class="home-footer-links" id="homeFooterLinks" style="display:none;">
+      <span class="home-footer-link" id="siteIntroLink">사이트 소개</span>
+      <span class="home-footer-dot">·</span>
+      <span class="home-footer-link" id="privacyPolicyLink">개인정보 처리방침</span>
+    </div>
   </div>
 
   <div class="chart-overlay" id="chartOverlay">
@@ -2014,11 +2020,13 @@
           </svg>
         </button>
       </div>
-      <div class="info-page-body">
+      <div class="info-page-body home-card">
         <div class="info-page-title">Tickr 소개</div>
-        <p>Tickr는 국내주식, 미국주식, 가상자산 등의 실시간 시세를 한 곳에서 확인하고, 보유 종목의 평가금액과 수익률을 바로 계산해볼 수 있는 개인용 투자 정보 서비스입니다.</p>
-        <p>실시간 시세, 관심종목 관리, 물타기 계산기, 경제지표 캘린더 등 투자에 필요한 기능을 간단하고 빠르게 제공하는 것을 목표로 만들고 있습니다.</p>
-        <div class="info-page-contact">광고 및 문의: <a href="mailto:inhwanbaeg99@gmail.com">inhwanbaeg99@gmail.com</a></div>
+        <p><b>사이트 소개</b><br>Tickr는 국내주식, 미국주식, 가상자산 등의 실시간 시세를 한 곳에서 확인하고, 보유 종목의 평가금액과 수익률을 바로 계산해볼 수 있는 개인용 투자 정보 서비스입니다.</p>
+        <p><b>주요 기능</b><br>실시간 시세 조회, 관심종목 관리, 보유종목 평가금액·수익률 계산, 물타기 계산기, 경제지표 캘린더, 국내·해외 뉴스를 제공합니다.</p>
+        <p><b>데이터 출처</b><br>주식·가상자산 시세는 바이낸스 연동 데이터를 활용하며, 환율·금리·원자재 등 경제지표는 공개된 금융 데이터를 참고합니다. 국내 뉴스는 연합뉴스 공개 RSS를 활용합니다.</p>
+        <p>Tickr는 정보 제공 목적의 서비스이며, 특정 종목의 매수·매도를 권유하거나 투자 자문을 제공하지 않습니다. 표시되는 모든 수치는 참고용이며, 투자 판단과 그 결과에 대한 책임은 이용자 본인에게 있습니다.</p>
+        <div class="info-page-contact">문의: <a href="mailto:inhwanbaeg99@gmail.com">inhwanbaeg99@gmail.com</a></div>
       </div>
     </div>
   </div>
@@ -2032,13 +2040,12 @@
           </svg>
         </button>
       </div>
-      <div class="info-page-body">
+      <div class="info-page-body home-card">
         <div class="info-page-title">개인정보 처리방침</div>
-        <p><b>1. 로그인</b><br>카카오 로그인을 통해 일부 기능(뉴스 열람 등)을 이용할 수 있습니다. 로그인 시 카카오로부터 제공받는 식별자, 닉네임 등 최소한의 정보만 로그인 상태 유지를 위해 사용되며, Supabase를 통해 안전하게 처리됩니다.</p>
-        <p><b>2. 투자 정보</b><br>보유 종목, 수량, 매입가, 관심종목 등 직접 입력하신 투자 정보는 서버로 전송되지 않고 사용 중인 기기의 브라우저(localStorage)에만 저장됩니다. 다른 기기와 공유되지 않으며, 브라우저 데이터를 지우면 함께 삭제됩니다.</p>
-        <p><b>3. 시세 데이터</b><br>실시간 시세, 뉴스, 환율 등은 외부 시세 제공처에서 받아오며, 이 과정에서 이용자의 개인정보는 전송되지 않습니다.</p>
-        <p><b>4. 문의</b><br>개인정보와 관련한 문의사항은 아래 이메일로 연락해주세요.</p>
-        <div class="info-page-contact">광고 및 문의: <a href="mailto:inhwanbaeg99@gmail.com">inhwanbaeg99@gmail.com</a></div>
+        <p><b>1. 투자 정보</b><br>보유 종목, 수량, 매입가, 관심종목 등 직접 입력하신 투자 정보는 서버로 전송되지 않고 사용 중인 기기의 브라우저(localStorage)에만 저장됩니다. 다른 기기와 공유되지 않으며, 브라우저 데이터를 지우면 함께 삭제됩니다.</p>
+        <p><b>2. 시세 데이터</b><br>실시간 시세, 뉴스, 환율 등은 외부 시세 제공처에서 받아오며, 이 과정에서 이용자의 개인정보는 전송되지 않습니다.</p>
+        <p><b>3. 문의</b><br>개인정보와 관련한 문의사항은 아래 이메일로 연락해주세요.</p>
+        <div class="info-page-contact">문의: <a href="mailto:inhwanbaeg99@gmail.com">inhwanbaeg99@gmail.com</a></div>
       </div>
     </div>
   </div>
@@ -2131,6 +2138,7 @@
 
   const listEl = document.getElementById('list');
   const updatedAtEl = document.getElementById('updatedAt');
+  const homeFooterLinksEl = document.getElementById('homeFooterLinks');
   const modeTabsEl = document.getElementById('modeTabs');
   const modeTabsWrapEl = document.getElementById('modeTabsWrap');
   const newsSubtabsWrapEl = document.getElementById('newsSubtabsWrap');
@@ -2670,14 +2678,23 @@
       `;
     }
 
+    // 게이지 호의 5단계 색과 완전히 같은 기준으로 라벨 색을 고른다 (fngGaugeSvg의
+    // segments와 동일한 구간) -- 공포/탐욕 이진 분류가 아니라 값 위치 그대로.
+    function fngValueColor(v) {
+      if (v < 20) return '#ff3b30';
+      if (v < 40) return '#ff9500';
+      if (v < 60) return '#f2d000';
+      if (v < 80) return '#a8d400';
+      return '#2ecc71';
+    }
+
     function fngCardHtml(label, fng) {
-      const cls = fng ? (fng.label.includes('fear') ? 'fear' : fng.label.includes('greed') ? 'greed' : '') : '';
       return `
         <div class="fng-card">
           <div class="indicator-label">${label}</div>
           ${fng ? fngGaugeSvg(fng.value) : ''}
           <div class="fng-value">${fng ? fng.value : '-'}</div>
-          ${fng ? `<div class="fng-label ${cls}">${FNG_LABELS_KR[fng.label] || fng.label}</div>` : ''}
+          ${fng ? `<div class="fng-label" style="color:${fngValueColor(fng.value)}">${FNG_LABELS_KR[fng.label] || fng.label}</div>` : ''}
         </div>
       `;
     }
@@ -2692,15 +2709,7 @@
       </div>
     `;
 
-    const homeFooterLinksHtml = `
-      <div class="home-footer-links">
-        <span class="home-footer-link" id="siteIntroLink">Tickr 사이트 소개</span>
-        <span class="home-footer-dot">·</span>
-        <span class="home-footer-link" id="privacyPolicyLink">개인정보 처리방침</span>
-      </div>
-    `;
-
-    listEl.innerHTML = portfolioHtml + indicatorsHtml + fearGreedHtml + homeFooterLinksHtml;
+    listEl.innerHTML = portfolioHtml + indicatorsHtml + fearGreedHtml;
   }
 
   function holdingRowHtml(h, s, editMode) {
@@ -3543,7 +3552,16 @@
     listEl.classList.toggle('home-view', hideTabs || mode === 'watchlist');
     const appAlreadyInstalled = document.documentElement.classList.contains('pwa-standalone');
     appInstallBtn.style.display = view === 'home' && !appAlreadyInstalled ? '' : 'none';
+    homeFooterLinksEl.style.display = view === 'home' ? '' : 'none';
   }
+
+  homeFooterLinksEl.addEventListener('click', (e) => {
+    if (e.target.closest('#siteIntroLink')) {
+      openSiteIntro();
+    } else if (e.target.closest('#privacyPolicyLink')) {
+      openPrivacyPolicy();
+    }
+  });
 
   newsSubtabsWrapEl.addEventListener('click', (e) => {
     const btn = e.target.closest('.news-subtab-btn');
@@ -4494,14 +4512,6 @@
     }
     if (e.target.closest('#portfolioCard')) {
       openPortfolioDetail();
-      return;
-    }
-    if (e.target.closest('#siteIntroLink')) {
-      openSiteIntro();
-      return;
-    }
-    if (e.target.closest('#privacyPolicyLink')) {
-      openPrivacyPolicy();
       return;
     }
     if (e.target.closest('#watchlistAddLink')) {
