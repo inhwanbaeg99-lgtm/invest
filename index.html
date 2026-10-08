@@ -59,7 +59,7 @@
   }
   * { box-sizing: border-box; scrollbar-width: none; }
   *::-webkit-scrollbar { display: none; }
-  html, body { height: 100%; }
+  html, body { height: 100%; overflow-anchor: none; }
   body {
     margin: 0;
     min-height: 100vh;
@@ -3671,6 +3671,9 @@
       if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
     renderCurrent();
+    if (next !== 'news') {
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    }
   }
 
   navHomeBtn.classList.toggle('active', view === 'home');
