@@ -3648,6 +3648,7 @@
   function setView(next) {
     if (view === next) return;
     view = next;
+    window.scrollTo({ top: 0 });
     sessionStorage.setItem('tickr_view', view);
     if (next === 'news') {
       newsCalendarScrolled = false;
@@ -3667,12 +3668,11 @@
     navNewsBtn.classList.toggle('active', view === 'news');
     moveNavHighlight(navButtonFor(view));
     applyViewVisibility();
-    renderCurrent();
-    window.scrollTo({ top: 0 });
     if (modeWasReset) {
       const activeBtn = modeTabsEl.querySelector('.mode-tab.active');
       if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
+    renderCurrent();
   }
 
   navHomeBtn.classList.toggle('active', view === 'home');
