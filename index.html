@@ -3674,12 +3674,18 @@
     }
     renderCurrent();
     if (next !== 'news') {
-      requestAnimationFrame(() => window.scrollTo(0, 0));
-      // iOS 앱(홈 화면 설치) 모드에서는 이전 페이지의 관성 스크롤이 전환 이후까지
-      // 남아있다가 뒤늦게 다시 밀어내는 경우가 있어, 몇 차례 더 눌러서 확실히 고정한다.
-      setTimeout(() => window.scrollTo(0, 0), 60);
-      setTimeout(() => window.scrollTo(0, 0), 180);
-      setTimeout(() => window.scrollTo(0, 0), 400);
+      // iOS 앱(홈 화면 설치) 모드에서는 이전 페이지의 관성 스크롤/주소창 접힘
+      // 상태가 전환 이후까지 남아있다가 뒤늦게 다시 밀어내는 경우가 있어,
+      // window뿐 아니라 documentElement/body scrollTop도 같이 여러 차례 눌러서
+      // 확실히 고정한다 (타이밍 하나만으론 네트워크가 느릴 때 놓칠 수 있음).
+      const forceScrollTop = () => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      };
+      forceScrollTop();
+      requestAnimationFrame(() => requestAnimationFrame(forceScrollTop));
+      [60, 180, 400, 700, 1000].forEach((ms) => setTimeout(forceScrollTop, ms));
     }
   }
 
