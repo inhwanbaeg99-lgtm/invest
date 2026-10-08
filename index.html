@@ -3637,7 +3637,7 @@
         if (isActive) activeBtn = b;
       });
       if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      window.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     applyViewVisibility();
     renderCurrent();
@@ -3646,7 +3646,7 @@
   function setView(next) {
     if (view === next) return;
     view = next;
-    window.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     sessionStorage.setItem('tickr_view', view);
     if (next === 'news') {
       newsCalendarScrolled = false;
