@@ -3971,27 +3971,28 @@
     return null;
   }
 
-  // Walks forward from `afterMs` to the next trading day's open (skipping
-  // weekends and holidays) -- used once today's session has closed, to extend
-  // the 1D chart's time axis out to the next open instead of stopping dead at
-  // today's close.
-  function getNextSessionStart(cat, afterMs) {
+  // Walks forward from `afterMs` to the very next calendar day's would-be open --
+  // used once today's session has closed, to extend the 1D chart's time axis out
+  // by exactly one day instead of stopping dead at today's close. Deliberately
+  // does NOT skip ahead to the next *trading* day: when tomorrow is a holiday or
+  // weekend, a multi-day skip (e.g. Thu close -> Mon open across a Fri holiday +
+  // weekend) stretched the whole chart width to fit that gap, squashing today's
+  // actual session into a sliver with a long flat run after it. Advancing one
+  // calendar day at a time keeps each day's width consistent, and a non-trading
+  // "tomorrow" just renders as gray for its whole span (handled by the existing
+  // sessionBoundary coloring in drawChart) rather than being swallowed into a
+  // bigger jump.
+  function getNextDayOpen(cat, afterMs) {
     const cfg = MARKET_HOURS[cat];
     if (!cfg) return null;
-    for (let i = 1; i <= 10; i++) {
-      const probe = new Date(afterMs + i * 86400000);
-      const offsetMin = tzOffsetMinutes(probe, cfg.tz);
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: cfg.tz, hourCycle: 'h23', weekday: 'short',
-        year: 'numeric', month: '2-digit', day: '2-digit',
-      }).formatToParts(probe).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
-      const weekdayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
-      const y = +parts.year, m = +parts.month, d = +parts.day;
-      const dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      if (!isTradingDay(cfg, weekdayIdx, dateStr)) continue;
-      return Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.openMin * 60000 - offsetMin * 60000;
-    }
-    return null;
+    const probe = new Date(afterMs + 86400000);
+    const offsetMin = tzOffsetMinutes(probe, cfg.tz);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: cfg.tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(probe).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
+    const y = +parts.year, m = +parts.month, d = +parts.day;
+    return Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.openMin * 60000 - offsetMin * 60000;
   }
 
   // "Since regular-session-open" change% for list rows, falling back to Binance's
@@ -4240,7 +4241,7 @@
     // portion shows real price action instead of a flat placeholder.
     let domainEnd = session ? session.fullEnd : null;
     if (session && Date.now() >= session.fullEnd) {
-      domainEnd = getNextSessionStart(currentCat, session.fullEnd) || session.fullEnd;
+      domainEnd = getNextDayOpen(currentCat, session.fullEnd) || session.fullEnd;
     }
     const fetchEnd = session ? Math.min(Date.now(), domainEnd) : null;
     const url = session
