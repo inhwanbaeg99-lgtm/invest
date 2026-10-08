@@ -3624,6 +3624,7 @@
   privacyPolicyClose.addEventListener('click', closePrivacyPolicy);
 
   function setMode(next) {
+    clearPendingScrollResets();
     view = 'all';
     sessionStorage.setItem('tickr_view', view);
     navAllBtn.classList.add('active');
@@ -3645,8 +3646,21 @@
     renderCurrent();
   }
 
+  let pendingScrollResetTimers = [];
+  let pendingScrollResetFrames = [];
+  function clearPendingScrollResets() {
+    pendingScrollResetTimers.forEach(clearTimeout);
+    pendingScrollResetTimers = [];
+    pendingScrollResetFrames.forEach(cancelAnimationFrame);
+    pendingScrollResetFrames = [];
+  }
+
   function setView(next) {
     if (view === next) return;
+    // 이전 전환에서 예약해둔 지연 스크롤 리셋이 이번 전환(특히 뉴스 일정
+    // 자동 스크롤) 이후에 뒤늦게 발동해 위치를 다시 0으로 되돌리는 레이스를
+    // 막기 위해, 새 전환을 시작할 때마다 예전 예약분을 먼저 전부 취소한다.
+    clearPendingScrollResets();
     view = next;
     window.scrollTo({ top: 0 });
     sessionStorage.setItem('tickr_view', view);
@@ -3684,8 +3698,14 @@
         document.body.scrollTop = 0;
       };
       forceScrollTop();
-      requestAnimationFrame(() => requestAnimationFrame(forceScrollTop));
-      [60, 180, 400, 700, 1000].forEach((ms) => setTimeout(forceScrollTop, ms));
+      const frame1 = requestAnimationFrame(() => {
+        const frame2 = requestAnimationFrame(forceScrollTop);
+        pendingScrollResetFrames.push(frame2);
+      });
+      pendingScrollResetFrames.push(frame1);
+      [60, 180, 400, 700, 1000].forEach((ms) => {
+        pendingScrollResetTimers.push(setTimeout(forceScrollTop, ms));
+      });
     }
   }
 
