@@ -3623,8 +3623,41 @@
   }
   privacyPolicyClose.addEventListener('click', closePrivacyPolicy);
 
+  let pendingScrollResetTimers = [];
+  let pendingScrollResetFrames = [];
+  function clearPendingScrollResets() {
+    pendingScrollResetTimers.forEach(clearTimeout);
+    pendingScrollResetTimers = [];
+    pendingScrollResetFrames.forEach(cancelAnimationFrame);
+    pendingScrollResetFrames = [];
+  }
+
+  // iOS 스탠드얼론(PWA) 모드에서는 JS로 scrollTo(0,0)을 호출해도 관성
+  // 스크롤 애니메이션이 그 이후까지 이어지며 콘텐츠를 다시 밀어내리는
+  // 경우가 있다. overflow:hidden은 네이티브 관성 스크롤을 즉시 멈추므로,
+  // 전환 시작 시 잠깐 걸어뒀다가 콘텐츠 교체가 끝나면 다음 프레임에 푼다.
+  function lockScrollForTransition() {
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }
+  function unlockScrollAfterTransition() {
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  }
+  function scheduleUnlock() {
+    const frame1 = requestAnimationFrame(() => {
+      const frame2 = requestAnimationFrame(unlockScrollAfterTransition);
+      pendingScrollResetFrames.push(frame2);
+    });
+    pendingScrollResetFrames.push(frame1);
+  }
+
   function setMode(next) {
     clearPendingScrollResets();
+    lockScrollForTransition();
     view = 'all';
     sessionStorage.setItem('tickr_view', view);
     navAllBtn.classList.add('active');
@@ -3640,19 +3673,10 @@
         if (isActive) activeBtn = b;
       });
       if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      window.scrollTo({ top: 0 });
     }
     applyViewVisibility();
     renderCurrent();
-  }
-
-  let pendingScrollResetTimers = [];
-  let pendingScrollResetFrames = [];
-  function clearPendingScrollResets() {
-    pendingScrollResetTimers.forEach(clearTimeout);
-    pendingScrollResetTimers = [];
-    pendingScrollResetFrames.forEach(cancelAnimationFrame);
-    pendingScrollResetFrames = [];
+    scheduleUnlock();
   }
 
   function setView(next) {
@@ -3661,8 +3685,8 @@
     // 자동 스크롤) 이후에 뒤늦게 발동해 위치를 다시 0으로 되돌리는 레이스를
     // 막기 위해, 새 전환을 시작할 때마다 예전 예약분을 먼저 전부 취소한다.
     clearPendingScrollResets();
+    lockScrollForTransition();
     view = next;
-    window.scrollTo({ top: 0 });
     sessionStorage.setItem('tickr_view', view);
     if (next === 'news') {
       newsCalendarScrolled = false;
@@ -3687,23 +3711,17 @@
       if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
     renderCurrent();
+    scheduleUnlock();
     if (next !== 'news') {
-      // iOS 앱(홈 화면 설치) 모드에서는 이전 페이지의 관성 스크롤/주소창 접힘
-      // 상태가 전환 이후까지 남아있다가 뒤늦게 다시 밀어내는 경우가 있어,
-      // window뿐 아니라 documentElement/body scrollTop도 같이 여러 차례 눌러서
-      // 확실히 고정한다 (타이밍 하나만으론 네트워크가 느릴 때 놓칠 수 있음).
+      // 잠금을 풀고 난 뒤에도 iOS 관성 스크롤 잔여분이 뒤늦게 한 번 더
+      // 밀어내는 경우가 있어, 몇 차례 더 눌러서 확실히 고정한다 (일정
+      // 화면은 '오늘로 스크롤' 위치와 충돌하므로 제외).
       const forceScrollTop = () => {
         window.scrollTo(0, 0);
         document.documentElement.scrollTop = 0;
         document.body.scrollTop = 0;
       };
-      forceScrollTop();
-      const frame1 = requestAnimationFrame(() => {
-        const frame2 = requestAnimationFrame(forceScrollTop);
-        pendingScrollResetFrames.push(frame2);
-      });
-      pendingScrollResetFrames.push(frame1);
-      [60, 180, 400, 700, 1000].forEach((ms) => {
+      [100, 300, 600].forEach((ms) => {
         pendingScrollResetTimers.push(setTimeout(forceScrollTop, ms));
       });
     }
