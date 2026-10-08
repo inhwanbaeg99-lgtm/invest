@@ -3673,6 +3673,11 @@
     renderCurrent();
     if (next !== 'news') {
       requestAnimationFrame(() => window.scrollTo(0, 0));
+      // iOS 앱(홈 화면 설치) 모드에서는 이전 페이지의 관성 스크롤이 전환 이후까지
+      // 남아있다가 뒤늦게 다시 밀어내는 경우가 있어, 몇 차례 더 눌러서 확실히 고정한다.
+      setTimeout(() => window.scrollTo(0, 0), 60);
+      setTimeout(() => window.scrollTo(0, 0), 180);
+      setTimeout(() => window.scrollTo(0, 0), 400);
     }
   }
 
