@@ -3912,6 +3912,13 @@
     index: { tz: 'America/New_York', openMin: 9 * 60 + 30, closeMin: 16 * 60, holidays: US_MARKET_HOLIDAYS_2026 },
   };
 
+  // Per-symbol override of a category's closeMin (raw symbol, with the USDT
+  // suffix, matching currentSymbol/data-symbol) -- domestic defaults to 20:00
+  // but KODEX200 stays on KRX's actual 15:30 close.
+  const SESSION_CLOSE_OVERRIDES = {
+    KODEX200USDT: 15 * 60 + 30,
+  };
+
   // How far "local wall-clock time in tz" is ahead of UTC, in minutes, at the given instant
   // (handles DST automatically since it's derived from Intl at that exact instant).
   function tzOffsetMinutes(date, tz) {
@@ -3950,9 +3957,10 @@
     return !isTradingDay(cfg, weekdayIdx, dateStr);
   }
 
-  function getRegularSession(cat, now) {
+  function getRegularSession(cat, now, symbol) {
     const cfg = MARKET_HOURS[cat];
     if (!cfg) return null;
+    const closeMin = (symbol && SESSION_CLOSE_OVERRIDES[symbol] != null) ? SESSION_CLOSE_OVERRIDES[symbol] : cfg.closeMin;
     // Round to the minute: tzOffsetMinutes truncates to whole seconds internally,
     // so an un-rounded `now` makes session.start jitter by sub-second amounts
     // across calls -- and since that value is used as a cache key elsewhere,
@@ -3977,7 +3985,7 @@
       const sessionOpen = Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.openMin * 60000 - offsetMin * 60000;
       if (dayOffset === 0 && now.getTime() < sessionOpen) continue; // today, but before open
 
-      const sessionClose = Date.UTC(y, m - 1, d, 0, 0, 0) + cfg.closeMin * 60000 - offsetMin * 60000;
+      const sessionClose = Date.UTC(y, m - 1, d, 0, 0, 0) + closeMin * 60000 - offsetMin * 60000;
       return {
         start: sessionOpen,
         end: Math.max(Math.min(now.getTime(), sessionClose), sessionOpen + 60000),
@@ -4249,7 +4257,7 @@
     chartLoadingEl.style.display = 'flex';
     chartScrubLabelEl.style.display = 'none';
     const { interval, limit } = RANGES[currentRange];
-    const session = currentRange === '1D' ? getRegularSession(currentCat, new Date()) : null;
+    const session = currentRange === '1D' ? getRegularSession(currentCat, new Date(), currentSymbol) : null;
     // Binance's tokenized-stock symbols actually keep trading (and moving) around
     // the clock, same as any crypto pair -- the regular session hours only bound
     // when the chart is drawn in color. Once today's session has closed, stretch
