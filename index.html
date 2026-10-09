@@ -2466,12 +2466,21 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  // Shortens a base symbol for display only -- krName() below reverse-maps
+  // through this so the KR_NAMES lookup still works off the original key.
+  const DISPLAY_NAME_OVERRIDES = { LGELECTRONICS: 'LG' };
+  const DISPLAY_NAME_REVERSE = Object.fromEntries(
+    Object.entries(DISPLAY_NAME_OVERRIDES).map(([base, shown]) => [shown, base]),
+  );
+
   function displayName(symbol) {
-    return symbol.replace(/USDT$/, '');
+    const base = symbol.replace(/USDT$/, '');
+    return DISPLAY_NAME_OVERRIDES[base] || base;
   }
 
   function krName(name, cat) {
-    return (KR_NAMES[cat || mode] || {})[name];
+    const key = DISPLAY_NAME_REVERSE[name] || name;
+    return (KR_NAMES[cat || mode] || {})[key];
   }
 
   function categoryFilter(t) {
