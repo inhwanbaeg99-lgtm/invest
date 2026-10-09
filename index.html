@@ -3702,9 +3702,13 @@
       newsSubTab = 'calendar';
       sessionStorage.setItem('tickr_newsSubTab', newsSubTab);
     }
-    const modeWasReset = next === 'all' && mode !== 'domestic';
+    // Landing on 전체시세 fresh from Home/News always jumps to a fixed default
+    // tab rather than remembering whatever was last open -- 관심종목 if the
+    // user has anything starred, otherwise 국내주식.
+    const defaultMode = watchlist.length ? 'watchlist' : 'domestic';
+    const modeWasReset = next === 'all' && mode !== defaultMode;
     if (modeWasReset) {
-      mode = 'domestic';
+      mode = defaultMode;
       sessionStorage.setItem('tickr_mode', mode);
       modeTabsEl.querySelectorAll('.mode-tab').forEach((b) => {
         b.classList.toggle('active', b.dataset.mode === mode);
