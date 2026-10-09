@@ -4347,6 +4347,7 @@
     updateChartHeart();
     updateChartMyHolding();
     loadChart();
+    sessionStorage.setItem('tickr_chartOpen', JSON.stringify({ symbol, cat }));
   }
 
   // Cheap per-tick price refresh for the chart header -- reuses the already-
@@ -4627,6 +4628,7 @@
     chartOverlay.classList.remove('open');
     currentSymbol = null;
     currentCat = null;
+    sessionStorage.removeItem('tickr_chartOpen');
   }
 
   function updateChartHeart() {
@@ -4937,6 +4939,18 @@
   attachSwipeBack(installGuidePageEl, closeInstallGuide, null);
   attachSwipeBack(siteIntroPageEl, closeSiteIntro, null);
   attachSwipeBack(privacyPolicyPageEl, closePrivacyPolicy, null);
+
+  // Mirrors the tickr_portfolioOpen restore above -- a refresh while the chart
+  // overlay is open should land back on that same stock's chart instead of
+  // dropping to whatever page sits underneath it.
+  try {
+    const savedChart = JSON.parse(sessionStorage.getItem('tickr_chartOpen') || 'null');
+    if (savedChart && savedChart.symbol && savedChart.cat) {
+      openChart(savedChart.symbol, savedChart.cat);
+    }
+  } catch (e) {
+    sessionStorage.removeItem('tickr_chartOpen');
+  }
 
   if ('serviceWorker' in navigator) {
     let refreshing = false;
