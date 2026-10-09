@@ -3934,6 +3934,22 @@
     return true;
   }
 
+  // Whether `cat`'s exchange is simply closed all day today (weekend or holiday),
+  // in its own local calendar date -- used to swap the "1일" range-tab label to
+  // "휴일" instead of implying there's a session to show. Categories with no
+  // MARKET_HOURS entry (crypto) trade every day, so they're never a holiday.
+  function isTodayHoliday(cat) {
+    const cfg = MARKET_HOURS[cat];
+    if (!cfg) return false;
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: cfg.tz, hourCycle: 'h23', weekday: 'short',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date()).reduce((acc, p) => ((acc[p.type] = p.value), acc), {});
+    const weekdayIdx = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
+    const dateStr = `${parts.year}-${parts.month}-${parts.day}`;
+    return !isTradingDay(cfg, weekdayIdx, dateStr);
+  }
+
   function getRegularSession(cat, now) {
     const cfg = MARKET_HOURS[cat];
     if (!cfg) return null;
@@ -4312,6 +4328,7 @@
     currentRange = '1D';
     chartRangesEl.querySelectorAll('.chart-range-btn').forEach((b) => {
       b.classList.toggle('active', b.dataset.range === currentRange);
+      if (b.dataset.range === '1D') b.textContent = isTodayHoliday(cat) ? '휴일' : '1일';
     });
     const name = displayName(symbol);
     chartSymbolEl.textContent = name;
