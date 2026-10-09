@@ -4253,17 +4253,25 @@
     // Binance's tokenized-stock symbols actually keep trading (and moving) around
     // the clock, same as any crypto pair -- the regular session hours only bound
     // when the chart is drawn in color. Once today's session has closed, stretch
-    // the fetch out to tomorrow's open (capped at "now") so the after-hours
-    // portion shows real price action instead of a flat placeholder. Floored at
-    // `now` as well: on an ordinary day that's a no-op (tomorrow's open is still
-    // ahead of now), but on a holiday/weekend `session` keeps resolving to the
-    // last trading day, so a fixed one-day-ahead target would otherwise freeze
-    // the chart's right edge back at that next calendar day's open and stop
-    // advancing -- flooring at `now` lets the gray run keep pace with the
-    // elapsed holiday instead of cutting it off partway through.
+    // the axis out to the next day's open (capped at "now" for the actual fetch)
+    // so the after-hours portion shows real price action instead of a flat
+    // placeholder -- same as a same-day chart reserving its full width while the
+    // session is still in progress. On a holiday/weekend `session` keeps
+    // resolving to the last trading day, so that single one-day-ahead target
+    // can itself fall in the past once enough of the closure has elapsed; step
+    // forward a full day at a time (each step mirrors the same close-to-next-
+    // open stretch a normal session gets) until landing on the next boundary
+    // that's still ahead, rather than continuously tracking "now" -- the width
+    // then only changes once a day, at each boundary crossing, instead of
+    // shrinking the real session's share of it on every redraw.
     let domainEnd = session ? session.fullEnd : null;
     if (session && Date.now() >= session.fullEnd) {
-      domainEnd = Math.max(getNextDayOpen(currentCat, session.fullEnd) || session.fullEnd, Date.now());
+      domainEnd = getNextDayOpen(currentCat, session.fullEnd) || session.fullEnd;
+      while (domainEnd < Date.now()) {
+        const stepped = getNextDayOpen(currentCat, domainEnd);
+        if (stepped == null) break;
+        domainEnd = stepped;
+      }
     }
     const fetchEnd = session ? Math.min(Date.now(), domainEnd) : null;
     const url = session
